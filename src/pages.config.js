@@ -50,6 +50,8 @@
 import AdditionalPrepCounsel from './pages/AdditionalPrepCounsel';
 import AdditionalPrepSolicitor from './pages/AdditionalPrepSolicitor';
 import AdditionalPrepWorksheet from './pages/AdditionalPrepWorksheet';
+import AidPlanner from './pages/AidPlanner';
+import ClaimCosts from './pages/ClaimCosts';
 import Guidelines from './pages/Guidelines';
 import Home from './pages/Home.jsx';
 import IntakeForm from './pages/IntakeForm';
@@ -62,6 +64,8 @@ export const PAGES = {
     "AdditionalPrepCounsel": AdditionalPrepCounsel,
     "AdditionalPrepSolicitor": AdditionalPrepSolicitor,
     "AdditionalPrepWorksheet": AdditionalPrepWorksheet,
+    "AidPlanner": AidPlanner,
+    "ClaimCosts": ClaimCosts,
     "Guidelines": Guidelines,
     "Home": Home,
     "IntakeForm": IntakeForm,

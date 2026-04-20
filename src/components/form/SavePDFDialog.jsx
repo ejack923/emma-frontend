@@ -3,6 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { FileDown, ChevronRight } from "lucide-react";
 
+/**
+ * @param {{
+ *   open: boolean,
+ *   onOpenChange: (open: boolean) => void,
+ *   onSave: () => void | Promise<void>,
+ *   onSkip: () => void,
+ *   isLoading: boolean
+ * }} props
+ */
 export default function SavePDFDialog({ open, onOpenChange, onSave, onSkip, isLoading }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

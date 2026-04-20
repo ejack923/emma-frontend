@@ -1,4 +1,6 @@
-export const APP_MODE = import.meta.env.VITE_APP_MODE || "app";
+const APP_ENV = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
+
+export const APP_MODE = APP_ENV.VITE_APP_MODE || "app";
 
 export const isDemoMode = APP_MODE === "demo";
 

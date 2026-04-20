@@ -35,7 +35,6 @@ const FACTOR_OPTIONS = [
 export default function Step7Court({ data, onChange }) {
   return (
     <div className="space-y-8">
-      {/* Section 18 */}
       <div>
         <SectionHeader number="18" title="Court hearings" />
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 space-y-1">
@@ -48,7 +47,7 @@ export default function Step7Court({ data, onChange }) {
             </li>
             <li>
               <a href="http://cjep.justice.vic.gov.au/pls/p100/ck_public_qry_crim.cp_crimlist_setup_idx" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">
-                Criminal Justice Enhancement Program – Criminal List
+                County Court List
               </a>
             </li>
           </ul>
@@ -70,7 +69,6 @@ export default function Step7Court({ data, onChange }) {
         </div>
       </div>
 
-      {/* Section 19 */}
       <div>
         <SectionHeader number="19" title="Payment of fees" />
         <div className="space-y-5">
@@ -91,7 +89,6 @@ export default function Step7Court({ data, onChange }) {
         </div>
       </div>
 
-      {/* Section 20 */}
       <div>
         <SectionHeader number="20" title="Your lawyer" />
         <div className="space-y-5">
@@ -103,7 +100,6 @@ export default function Step7Court({ data, onChange }) {
         </div>
       </div>
 
-      {/* Section 21 */}
       <div>
         <SectionHeader number="21" title="Your legal problem" />
         <div className="space-y-5">

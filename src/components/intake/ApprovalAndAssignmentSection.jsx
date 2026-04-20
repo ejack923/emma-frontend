@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import SectionHeader from "./SectionHeader";
 
@@ -25,7 +24,6 @@ const crimeSubtypes = ["Summary", "Consol", "Indictable", "Infringements", "Appe
 
 export default function ApprovalAndAssignmentSection({ formData, updateField, updateNestedField }) {
   const approvalData = formData.approval_data || {};
-  const [showCrimeDropdown, setShowCrimeDropdown] = useState(false);
 
   const handleApprovalChange = (key, value) => {
     updateNestedField("approval_data", key, value);

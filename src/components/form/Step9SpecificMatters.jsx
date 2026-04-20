@@ -5,11 +5,19 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 
+/**
+ * @param {{
+ *   data: Record<string, any>,
+ *   onChange: (name: string, value: any) => void
+ * }} props
+ */
 export default function Step9SpecificMatters({ data, onChange }) {
   const children = data.family_children || [{}];
 
   const addChild = () => onChange("family_children", [...children, {}]);
+  /** @param {number} idx */
   const removeChild = (idx) => onChange("family_children", children.filter((_, i) => i !== idx));
+  /** @param {number} idx @param {string} field @param {string} value */
   const updateChild = (idx, field, value) => {
     const updated = [...children];
     updated[idx] = { ...updated[idx], [field]: value };

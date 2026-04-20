@@ -7,9 +7,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-// Bundle store using localStorage
 const BUNDLE_KEY = "lacw_form_bundle";
 
+/**
+ * @typedef {{
+ *   formName: string,
+ *   content: string,
+ *   addedAt: string
+ * }} BundleItem
+ */
+
+/**
+ * @typedef {{
+ *   x: number,
+ *   y: number
+ * }} Position
+ */
+
+/** @returns {BundleItem[]} */
 export function getBundle() {
   try {
     return JSON.parse(localStorage.getItem(BUNDLE_KEY)) || [];
@@ -18,6 +33,7 @@ export function getBundle() {
   }
 }
 
+/** @param {string} formName @param {string} content */
 export function addToBundle(formName, content) {
   const bundle = getBundle();
   const idx = bundle.findIndex(f => f.formName === formName);
@@ -30,6 +46,7 @@ export function addToBundle(formName, content) {
   window.dispatchEvent(new Event("bundle-updated"));
 }
 
+/** @param {string} formName */
 export function removeFromBundle(formName) {
   const bundle = getBundle().filter(f => f.formName !== formName);
   localStorage.setItem(BUNDLE_KEY, JSON.stringify(bundle));
@@ -43,6 +60,7 @@ export function clearBundle() {
 
 // BundleBar component
 export default function BundleBar() {
+  /** @type {[BundleItem[], Function]} */
   const [bundle, setBundle] = useState([]);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -51,8 +69,10 @@ export default function BundleBar() {
   const [sendTo, setSendTo] = useState("ejackson@completelawsupport.com");
   const [cc, setCc] = useState("");
   const [notes, setNotes] = useState("");
+  /** @type {[Position, Function]} */
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  /** @type {[Position, Function]} */
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -67,6 +87,7 @@ export default function BundleBar() {
     return () => window.removeEventListener("bundle-updated", update);
   }, []);
 
+  /** @param {{ clientX: number, clientY: number }} e */
   const handleMouseDown = (e) => {
     setIsDragging(true);
     setDragOffset({
@@ -75,6 +96,7 @@ export default function BundleBar() {
     });
   };
 
+  /** @param {{ clientX: number, clientY: number }} e */
   const handleMouseMove = (e) => {
     if (!isDragging) return;
     const newPos = {
@@ -114,6 +136,7 @@ export default function BundleBar() {
 
     await base44.integrations.Core.SendEmail({
       to: sendTo,
+      cc,
       subject: `LACW Bundle Submission — ${bundle.length} form${bundle.length > 1 ? "s" : ""} (${new Date().toLocaleDateString("en-AU")})`,
       body: fullBody,
     });

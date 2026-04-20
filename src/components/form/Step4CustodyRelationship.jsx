@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextField, RadioField, CheckboxGroup, SectionHeader } from './FormField';
+import { RadioField, CheckboxGroup, SectionHeader } from './FormField';
 
 const RELATIONSHIP_OPTIONS = [
   { value: "Single", label: "Single" }, { value: "Living with partner", label: "Living with partner" },

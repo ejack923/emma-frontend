@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { createPageUrl } from "@/utils";
 import { brand } from "@/lib/demoConfig";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Save, Send, FileText, Printer, Mail } from "lucide-react";
+import { ChevronLeft, ChevronRight, Send, FileText, Printer, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -273,22 +273,33 @@ export default function LegalAidForm() {
             .vla-print-document { display: block !important; position: static !important; left: auto !important; }
             
             .vla-print-header {
-              background: #0071BC;
-              color: white;
-              padding: 30px 20px;
-              margin-bottom: 20px;
+              border-bottom: 2px solid #111827;
+              color: #111827;
+              padding: 0 0 16px 0;
+              margin: 0 20px 20px 20px;
               page-break-after: avoid;
             }
-            .vla-print-header h1 { font-size: 24px; font-weight: bold; margin: 0; }
-            .vla-print-header p { font-size: 12px; margin: 5px 0 0 0; }
+            .vla-print-header h1 { font-size: 20px; font-weight: 700; margin: 10px 0 4px 0; }
+            .vla-print-header p { font-size: 11px; margin: 0; color: #4b5563; }
+            .vla-print-header-meta {
+              display: flex;
+              justify-content: space-between;
+              gap: 16px;
+              font-size: 10px;
+              text-transform: uppercase;
+              letter-spacing: 0.04em;
+              color: #4b5563;
+            }
 
             .vla-section-header {
-              background: #0071BC;
-              color: white;
-              padding: 8px 15px;
+              border-top: 1px solid #d1d5db;
+              border-bottom: 1px solid #d1d5db;
+              color: #111827;
+              padding: 7px 15px;
               margin: 20px 0 12px 0;
               font-weight: bold;
               font-size: 12px;
+              background: #f9fafb;
               page-break-after: avoid;
             }
 
@@ -301,7 +312,7 @@ export default function LegalAidForm() {
 
             .vla-form-row {
               display: grid;
-              grid-template-columns: 1fr 1fr;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
               gap: 20px;
               margin-bottom: 12px;
               page-break-inside: avoid;
@@ -324,6 +335,93 @@ export default function LegalAidForm() {
               padding: 3px 0;
               min-height: 14px;
               font-size: 11px;
+            }
+
+            .vla-form-field-full {
+              grid-column: 1 / -1;
+              margin-bottom: 12px;
+            }
+
+            .vla-paragraph-block {
+              margin-bottom: 14px;
+              page-break-inside: avoid;
+            }
+
+            .vla-paragraph-block label {
+              display: block;
+              font-size: 10px;
+              font-weight: bold;
+              margin-bottom: 4px;
+              color: #333;
+            }
+
+            .vla-paragraph-block div {
+              border: 1px solid #d1d5db;
+              padding: 8px 10px;
+              min-height: 34px;
+              white-space: pre-wrap;
+            }
+
+            .vla-table-wrap,
+            .vla-subrecord,
+            .vla-signature-block {
+              margin-bottom: 14px;
+              page-break-inside: avoid;
+            }
+
+            .vla-table-title {
+              font-size: 10px;
+              font-weight: bold;
+              margin-bottom: 6px;
+              color: #333;
+            }
+
+            .vla-data-table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 10px;
+            }
+
+            .vla-data-table th,
+            .vla-data-table td {
+              border: 1px solid #d1d5db;
+              padding: 5px 6px;
+              text-align: left;
+              vertical-align: top;
+            }
+
+            .vla-data-table th {
+              background: #f3f4f6;
+              font-weight: bold;
+            }
+
+            .vla-signature-image-wrap {
+              border: 1px solid #d1d5db;
+              padding: 8px;
+              min-height: 60px;
+              display: flex;
+              align-items: center;
+            }
+
+            .vla-signature-image {
+              max-height: 54px;
+              max-width: 180px;
+              object-fit: contain;
+            }
+
+            .vla-signature-date {
+              font-size: 10px;
+              margin-top: 4px;
+              color: #4b5563;
+            }
+
+            .vla-print-footer {
+              margin: 24px 20px 0 20px;
+              padding-top: 10px;
+              border-top: 1px solid #d1d5db;
+              font-size: 10px;
+              text-align: center;
+              color: #666;
             }
 
             .vla-checkbox-group {

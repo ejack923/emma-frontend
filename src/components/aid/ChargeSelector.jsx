@@ -1,19 +1,28 @@
 import { useState, useMemo } from "react";
-import { CHARGE_DATA, CHARGE_SUBDIVISIONS } from "@/lib/chargeData";
+import { CHARGE_DATA } from "@/lib/chargeData";
 import { Search, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
+/**
+ * @param {{
+ *   value?: string[],
+ *   onChange: (next: string[]) => void
+ * }} props
+ */
 export default function ChargeSelector({ value = [], onChange }) {
   const [search, setSearch] = useState("");
   const [openSubdivisions, setOpenSubdivisions] = useState({});
   const [openGroups, setOpenGroups] = useState({});
 
+  /** @param {string} sub */
   const toggleSubdivision = (sub) =>
     setOpenSubdivisions((prev) => ({ ...prev, [sub]: !prev[sub] }));
 
+  /** @param {string} group */
   const toggleGroup = (group) =>
     setOpenGroups((prev) => ({ ...prev, [group]: !prev[group] }));
 
+  /** @param {string} desc */
   const toggle = (desc) => {
     if (value.includes(desc)) {
       onChange(value.filter((v) => v !== desc));
@@ -26,6 +35,7 @@ export default function ChargeSelector({ value = [], onChange }) {
   const searchResults = useMemo(() => {
     if (!search.trim()) return null;
     const q = search.toLowerCase();
+    /** @type {Record<string, Record<string, string[]>>} */
     const results = {};
     for (const [sub, groups] of Object.entries(CHARGE_DATA)) {
       for (const [group, descs] of Object.entries(groups)) {
@@ -46,7 +56,9 @@ export default function ChargeSelector({ value = [], onChange }) {
 
   const isSearching = search.trim().length > 0;
 
+  /** @param {string[]} descs */
   const countSelected = (descs) => descs.filter((d) => value.includes(d)).length;
+  /** @param {Record<string, string[]>} groups */
   const countGroupSelected = (groups) =>
     Object.values(groups).flat().filter((d) => value.includes(d)).length;
 

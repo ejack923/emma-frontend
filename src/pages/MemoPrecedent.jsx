@@ -19,7 +19,6 @@ const EMPTY_FORM = {
   from: "",
   grantRefNumber: "",
   clientName: "",
-  overviewOfMatter: "",
   fundingSought: "",
 };
 
@@ -77,10 +76,7 @@ Client Name: ${form.clientName}
 
 Re: Request for funding for psychiatric assessment and report
 
-Overview of Matter:
-${form.overviewOfMatter}
-
-Funding Sought:
+Request for funding:
 ${form.fundingSought}
 
 Should you require any further information, please contact ${brand.genericContactLine}.
@@ -142,9 +138,7 @@ ${form.from}
           <p style={{ margin: "0 0 12px 0" }}>Dear {form.to}</p>
           <p style={{ margin: "0 0 12px 0", fontWeight: "bold" }}>Re: Request for funding for psychiatric assessment and report</p>
           <p style={{ margin: "0 0 12px 0" }}>I refer to our request for</p>
-          <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>Overview of matter</p>
-          <p style={{ margin: "0 0 24px 0", whiteSpace: "pre-wrap" }}>{form.overviewOfMatter}</p>
-          <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>Funding sought</p>
+          <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>Request for funding</p>
           <p style={{ margin: "0 0 24px 0", whiteSpace: "pre-wrap" }}>{form.fundingSought}</p>
           <p style={{ margin: "0 0 12px 0" }}>Should you require any further information, please contact {brand.genericContactLine}.</p>
           <p style={{ margin: "24px 0 0 0", fontWeight: "bold" }}>Yours faithfully</p>
@@ -227,12 +221,7 @@ ${form.from}
               </div>
             </div>
             <div>
-              <Label>Overview of Matter</Label>
-              <Textarea value={form.overviewOfMatter} onChange={e => set("overviewOfMatter", e.target.value)}
-                placeholder="Provide an overview of the matter..." rows={4} />
-            </div>
-            <div>
-              <Label>Funding Sought</Label>
+              <Label>Request for funding</Label>
               <Textarea value={form.fundingSought} onChange={e => set("fundingSought", e.target.value)}
                 placeholder="Describe the funding being sought..." rows={4} />
             </div>
@@ -273,7 +262,7 @@ ${form.from}
             <Button
               type="button"
               onClick={() => {
-                const content = `MEMO PRECEDENT\n\nOur Ref: ${form.ourRef}\nClient: ${form.clientName}\nGrant Ref: ${form.grantRefNumber}\n\nOverview:\n${form.overviewOfMatter}\n\nFunding Sought:\n${form.fundingSought}`;
+                const content = `MEMO PRECEDENT\n\nOur Ref: ${form.ourRef}\nClient: ${form.clientName}\nGrant Ref: ${form.grantRefNumber}\n\nRequest for funding:\n${form.fundingSought}`;
                 addToBundle("Memo Precedent", content);
               }}
               className="bg-slate-600 hover:bg-slate-700 text-white font-medium px-6 py-2"

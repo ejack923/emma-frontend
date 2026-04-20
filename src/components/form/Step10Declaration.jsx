@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { TextField, RadioField, CheckboxField, CheckboxGroup, SectionHeader } from './FormField';
-
+import { TextField, TextAreaField, RadioField, CheckboxGroup, SectionHeader } from './FormField';
+import SignatureBox from '../vla/SignatureBox';
 
 const WAIVER_OPTIONS = [
   { value: "custody_savings", label: "I am in custody or detention and have savings and investments ≤ $1095" },
@@ -21,6 +21,12 @@ const MTC_OPTIONS = [
   { value: "mtc8", label: "No proof of income or assets is required as my client is experiencing homelessness, and/or is fleeing from or experiencing family violence, and/or resides in a remote area, and/or identifies as Aboriginal and/or Torres Strait Islander descent." },
 ];
 
+const DECLARATION_METHOD_OPTIONS = [
+  { value: "client_to_sign", label: "Client to sign" },
+  { value: "telephone_declaration", label: "Telephone Declaration" },
+  { value: "other", label: "Other" },
+];
+
 export default function Step10Declaration({ data, onChange }) {
   useEffect(() => {
     const now = new Date();
@@ -30,34 +36,60 @@ export default function Step10Declaration({ data, onChange }) {
     const day = String(sydneyTime.getDate()).padStart(2, '0');
     const hours = String(sydneyTime.getHours()).padStart(2, '0');
     const minutes = String(sydneyTime.getMinutes()).padStart(2, '0');
-    
+
     if (!data.declaration_meeting_datetime) {
       const dateTime = `${year}-${month}-${day} ${hours}:${minutes}`;
       onChange("declaration_meeting_datetime", dateTime);
     }
-    
+
     if (!data.lawyer_date) {
       onChange("lawyer_date", `${year}-${month}-${day}`);
     }
-    
+
     if (!data.centrelink_consent_date) {
       onChange("centrelink_consent_date", `${year}-${month}-${day}`);
     }
-    
+
     if (!data.verbal_consent_datetime_location) {
       onChange("verbal_consent_datetime_location", `${year}-${month}-${day} ${hours}:${minutes}`);
     }
+
+    if (!data.declaration_method) {
+      onChange("declaration_method", "telephone_declaration");
+    }
   }, [onChange]);
+
+  const isClientToSign = data.declaration_method === "client_to_sign";
+  const isTelephoneDeclaration = data.declaration_method === "telephone_declaration";
+  const isOtherDeclaration = data.declaration_method === "other";
 
   return (
     <div className="space-y-8">
-      {/* Section 29 */}
       <div>
         <SectionHeader number="29" title="Application for legal assistance – telephone declaration record" />
         <div className="space-y-5">
+          <RadioField
+            label="Declaration method"
+            name="declaration_method"
+            value={data.declaration_method}
+            onChange={onChange}
+            options={DECLARATION_METHOD_OPTIONS}
+            inline={false}
+          />
+          {isOtherDeclaration && (
+            <TextField
+              label="Other declaration method"
+              name="declaration_method_other"
+              value={data.declaration_method_other}
+              onChange={onChange}
+              placeholder="Specify other declaration method..."
+            />
+          )}
 
           <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600 leading-relaxed">
-            This document is to be used by practitioners when a client makes a declaration about their application by telephone.
+            {isClientToSign
+              ? "Use this section when the client will sign the declaration directly."
+              : "This document is to be used when a client makes a declaration about their application verbally."}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -66,16 +98,14 @@ export default function Step10Declaration({ data, onChange }) {
           </div>
           <TextField label="Date and time of client meeting" name="declaration_meeting_datetime" value={data.declaration_meeting_datetime} onChange={onChange} />
 
-          <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600 leading-relaxed space-y-2">
-            <p>Following the completion of an application for legal assistance by telephone:</p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>read the applicant declaration to the client</li>
-              <li>give the client the opportunity to ask questions</li>
-              <li>ask the client to make the declaration in lieu of a signature.</li>
-            </ul>
-          </div>
+          {isTelephoneDeclaration && (
+            <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600 leading-relaxed space-y-2">
+              <p>Read the script to the client and get the client's verbal agreement.</p>
+              <p>Create the consent record (i.e. complete this form) at the same time you get consent from the client ensuring the words used to get consent are included.</p>
+              <p>Record the following:</p>
+            </div>
+          )}
 
-          {/* Applicant Declaration */}
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="bg-[#0071BC] text-white px-4 py-2 text-sm font-semibold">Applicant declaration (to be read to client)</div>
             <div className="p-4 text-sm text-gray-600 leading-relaxed space-y-3">
@@ -91,10 +121,24 @@ export default function Step10Declaration({ data, onChange }) {
                 <p>(ii) understand that I can ask for a copy of Victoria Legal Aid's privacy statement to be sent to me</p>
                 <p>(iii) consent to the submission of the application for legal assistance by electronic means to Victoria Legal Aid via the ATLAS grants management system.</p>
               </div>
+              {isClientToSign && (
+                <div className="pt-3 border-t border-gray-200 space-y-3">
+                  <SignatureBox
+                    value={data.client_signature}
+                    onChange={(value) => onChange("client_signature", value)}
+                  />
+                  <TextField
+                    label="Date signed"
+                    name="client_signature_date"
+                    value={data.client_signature_date}
+                    onChange={onChange}
+                    type="date"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Centrelink Consent and Authority */}
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="bg-[#0071BC] text-white px-4 py-2 text-sm font-semibold">Centrelink consent and authority</div>
             <div className="p-4 text-sm text-gray-600 leading-relaxed space-y-3">
@@ -117,53 +161,72 @@ export default function Step10Declaration({ data, onChange }) {
             </div>
           </div>
 
-          {/* Legal Practitioner Declaration */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="bg-[#0071BC] text-white px-4 py-2 text-sm font-semibold">Legal practitioner declaration</div>
-            <div className="p-4 text-sm text-gray-600 leading-relaxed space-y-4">
-              <p className="font-semibold text-gray-700">Declaration</p>
+          {!isClientToSign && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-[#0071BC] text-white px-4 py-2 text-sm font-semibold">Legal practitioner declaration</div>
+              <div className="p-4 text-sm text-gray-600 leading-relaxed space-y-4">
+                <p className="font-semibold text-gray-700">Declaration</p>
 
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <p>Did the client demonstrate an understanding that it is an offence to lie or fail to disclose relevant information in the aid application?</p>
-                  <RadioField label="" name="practitioner_q1" value={data.practitioner_q1} onChange={onChange} options={[{value:"Yes",label:"Yes"},{value:"No",label:"No"}]} />
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <p>Did the client demonstrate an understanding that it is an offence to lie or fail to disclose relevant information in the aid application?</p>
+                    <RadioField label="" name="practitioner_q1" value={data.practitioner_q1} onChange={onChange} options={[{value:"Yes",label:"Yes"},{value:"No",label:"No"}]} />
+                  </div>
+                  <div className="space-y-1">
+                    <p>Is the client aware that they can ask for a copy of VLA's privacy statement to be sent to them?</p>
+                    <RadioField label="" name="practitioner_q2" value={data.practitioner_q2} onChange={onChange} options={[{value:"Yes",label:"Yes"},{value:"No",label:"No"}]} />
+                  </div>
+                  <div className="space-y-1">
+                    <p>Does the client consent to electronic submission of the legal aid application form?</p>
+                    <RadioField label="" name="practitioner_q3" value={data.practitioner_q3} onChange={onChange} options={[{value:"Yes",label:"Yes"},{value:"No",label:"No"}]} />
+                  </div>
+                  <div className="space-y-1">
+                    <p>Does the client consent to VLA checking the information provided with Centrelink?</p>
+                    <RadioField label="" name="practitioner_q4" value={data.practitioner_q4} onChange={onChange} options={[{value:"Yes",label:"Yes"},{value:"No",label:"No"}]} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium text-gray-700">Client consent obtained via:</p>
+                    <RadioField
+                      label=""
+                      name="consent_obtained_via"
+                      value={data.consent_obtained_via}
+                      onChange={onChange}
+                      options={[
+                        { value:"Outbound phone call", label:"Outbound phone call" },
+                        { value:"Inbound phone call", label:"Inbound phone call" },
+                        { value:"Other", label:"Other" },
+                      ]}
+                    />
+                    {data.consent_obtained_via === "Other" && (
+                      <TextField
+                        label="Specify other consent method"
+                        name="consent_obtained_via_other"
+                        value={data.consent_obtained_via_other}
+                        onChange={onChange}
+                        placeholder="Specify other method..."
+                      />
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p>Is the client aware that they can ask for a copy of VLA's privacy statement to be sent to them?</p>
-                  <RadioField label="" name="practitioner_q2" value={data.practitioner_q2} onChange={onChange} options={[{value:"Yes",label:"Yes"},{value:"No",label:"No"}]} />
-                </div>
-                <div className="space-y-1">
-                  <p>Does the client consent to electronic submission of the legal aid application form?</p>
-                  <RadioField label="" name="practitioner_q3" value={data.practitioner_q3} onChange={onChange} options={[{value:"Yes",label:"Yes"},{value:"No",label:"No"}]} />
-                </div>
-                <div className="space-y-1">
-                  <p>Does the client consent to VLA checking the information provided with Centrelink?</p>
-                  <RadioField label="" name="practitioner_q4" value={data.practitioner_q4} onChange={onChange} options={[{value:"Yes",label:"Yes"},{value:"No",label:"No"}]} />
-                </div>
-                <div className="space-y-1">
-                  <p className="font-medium text-gray-700">Client consent obtained via:</p>
-                  <RadioField label="" name="consent_obtained_via" value={data.consent_obtained_via} onChange={onChange} options={[{value:"Outbound phone call",label:"Outbound phone call"},{value:"Inbound phone call",label:"Inbound phone call"}]} />
-                </div>
-              </div>
 
-              <div className="pt-2 border-t border-gray-200 space-y-2 text-gray-600">
-                <p className="font-medium text-gray-700">I declare:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>I have given the client the opportunity to ask questions about the declaration</li>
-                  <li>I have taken reasonable steps to ensure that the client understood the declaration</li>
-                  <li>I am satisfied that the client's response indicated acceptance of the declaration</li>
-                </ul>
-              </div>
+                <div className="pt-2 border-t border-gray-200 space-y-2 text-gray-600">
+                  <p className="font-medium text-gray-700">I declare:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>I have given the client the opportunity to ask questions about the declaration</li>
+                    <li>I have taken reasonable steps to ensure that the client understood the declaration</li>
+                    <li>I am satisfied that the client's response indicated acceptance of the declaration</li>
+                  </ul>
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <TextField label="Signed by lawyer" name="lawyer_signed" value={data.lawyer_signed} onChange={onChange} />
-                <TextField label="Name" name="lawyer_name" value={data.lawyer_name} onChange={onChange} />
-                <TextField label="Date" name="lawyer_date" value={data.lawyer_date} onChange={onChange} type="date" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <TextField label="Signed by lawyer" name="lawyer_signed" value={data.lawyer_signed} onChange={onChange} />
+                  <TextField label="Name" name="lawyer_name" value={data.lawyer_name} onChange={onChange} />
+                  <TextField label="Date" name="lawyer_date" value={data.lawyer_date} onChange={onChange} type="date" />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* LACW Centrelink eConfirmation Consent */}
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="bg-[#0071BC] text-white px-4 py-2 text-sm font-semibold">Centrelink eConfirmation Services Consent form</div>
             <div className="p-4 text-sm text-gray-600 leading-relaxed space-y-4">
@@ -187,54 +250,69 @@ export default function Step10Declaration({ data, onChange }) {
                 </ul>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <TextField label="Signed" name="centrelink_consent_signed" value={data.centrelink_consent_signed} onChange={onChange} />
-                <TextField label="Date" name="centrelink_consent_date" value={data.centrelink_consent_date} onChange={onChange} type="date" />
-              </div>
-
-              <div className="border-t border-gray-200 pt-4 space-y-3">
-                <p className="font-medium text-gray-700">Notes: If obtaining verbal consent you need to do all of these:</p>
-                <ol className="list-decimal pl-5 space-y-1">
-                  <li>Read the script to the client and get the client's verbal agreement</li>
-                  <li>Create the consent record (i.e. complete this form) at the same time you get consent from the client ensuring the words used to get consent are included.</li>
-                  <li>Record the following:</li>
-                </ol>
-                <div className="pl-5 space-y-4">
-                  <TextField label="1. Date, time and location of obtaining verbal consent" name="verbal_consent_datetime_location" value={data.verbal_consent_datetime_location} onChange={onChange} />
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700">2. Method of obtaining consent:</p>
-                    <RadioField label="" name="verbal_consent_method" value={data.verbal_consent_method} onChange={onChange} options={[{value:"By telephone",label:"By telephone"},{value:"In person",label:"In person"}]} />
-                    <TextField label="Other" name="verbal_consent_method_other" value={data.verbal_consent_method_other} onChange={onChange} placeholder="Specify other method..." />
-                  </div>
-                  <TextField label="3. Name of staff member of LACW getting consent" name="lacw_staff_name" value={data.lacw_staff_name} onChange={onChange} />
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700">4. How identity of customer confirmed:</p>
-                    <RadioField label="" name="identity_confirmed_method" value={data.identity_confirmed_method} onChange={onChange} options={[{value:"Detailed personal identifying information obtained",label:"Detailed personal identifying information obtained"},{value:"Cross-check against court/police records/existing records/referral info",label:"Cross-check against court/police records/existing records/referral info"}]} inline={false} />
-                  </div>
+              {isClientToSign ? (
+                <div className="space-y-4">
+                  <SignatureBox
+                    value={data.centrelink_consent_signature}
+                    onChange={(value) => onChange("centrelink_consent_signature", value)}
+                  />
+                  <TextField label="Date" name="centrelink_consent_date" value={data.centrelink_consent_date} onChange={onChange} type="date" />
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="border-t border-gray-200 pt-4 space-y-3">
+                    <p className="font-medium text-gray-700">Notes: If obtaining verbal consent you need to do all of these:</p>
+                    <ol className="list-decimal pl-5 space-y-1">
+                      <li>Read the script to the client and get the client's verbal agreement</li>
+                      <li>Create the consent record (i.e. complete this form) at the same time you get consent from the client ensuring the words used to get consent are included.</li>
+                      <li>Record the following:</li>
+                    </ol>
+                    <div className="pl-5 space-y-4">
+                      <TextField
+                        label="1. Date, time and location of obtaining verbal consent"
+                        name="verbal_consent_datetime_location"
+                        value={data.verbal_consent_datetime_location}
+                        onChange={onChange}
+                        placeholder="2026-04-16 13:59"
+                      />
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">2. Method of obtaining consent:</p>
+                        <RadioField
+                          label=""
+                          name="verbal_consent_method"
+                          value={data.verbal_consent_method}
+                          onChange={onChange}
+                          options={[
+                            { value:"By telephone", label:"By telephone" },
+                            { value:"In person", label:"In person" },
+                            { value:"Other", label:"Other" },
+                          ]}
+                          inline={false}
+                        />
+                        {data.verbal_consent_method === "Other" && (
+                          <TextField label="Specify other method" name="verbal_consent_method_other" value={data.verbal_consent_method_other} onChange={onChange} placeholder="Specify other method..." />
+                        )}
+                      </div>
+                      <TextField label="3. Name of staff member of LACW getting consent" name="lacw_staff_name" value={data.lacw_staff_name} onChange={onChange} />
+                      {isOtherDeclaration && (
+                        <TextAreaField
+                          label="Additional notes for other declaration method"
+                          name="declaration_method_notes"
+                          value={data.declaration_method_notes}
+                          onChange={onChange}
+                          placeholder="Include any extra details about how consent was obtained..."
+                          rows={4}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* Centrelink Details Confirmation */}
-      {data.receives_benefit === "Yes" && (
-        <div className="p-5 bg-amber-50 border border-amber-200 rounded-xl space-y-4">
-          <a
-            href="https://business.centrelink.gov.au/LoginServices/source/VANguard/ValidateBAN.jsp?finalURL=http%3A%2F%2Fbusiness.humanservices.gwy%2FLoginServices%2FAuthenticate.do"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-semibold text-amber-800 underline hover:text-amber-900"
-          >
-            Confirm your client's Centrelink details
-          </a>
-
-        </div>
-      )}
-
-      {/* Section 30 */}
       <div>
         <SectionHeader number="30" title="Proof of means" />
         <div className="p-4 bg-blue-50 rounded-lg mb-5 text-sm text-gray-600">
@@ -248,7 +326,6 @@ export default function Step10Declaration({ data, onChange }) {
         </div>
       </div>
 
-      {/* Section 31 - Means Certification */}
       {data.waiver_proof_means !== "Yes" && (
         <div>
           <SectionHeader number="31" title="Means certification" />
@@ -257,8 +334,6 @@ export default function Step10Declaration({ data, onChange }) {
           </div>
         </div>
       )}
-
-
     </div>
   );
 }

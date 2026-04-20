@@ -23,7 +23,7 @@ export default function BillingSummary({ entries, actions }) {
   const [furtherOpen, setFurtherOpen] = useState(true);
   const [approvalLetters, setApprovalLetters] = useState([]); // [{name, url}]
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef();
+  const fileInputRef = useRef(null);
 
   const handleUploadLetters = async (files) => {
     if (!files?.length) return;
@@ -103,6 +103,7 @@ export default function BillingSummary({ entries, actions }) {
 
     await base44.integrations.Core.SendEmail({
       to: "ejackson@completelawsupport.com",
+      cc: "",
       subject: `Demo Billing Summary - ${new Date().toLocaleDateString("en-AU")}`,
       body,
     });

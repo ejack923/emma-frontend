@@ -24,6 +24,12 @@ const ROLE_OPTIONS = [
   { value: "Other", label: "Other" },
 ];
 
+/**
+ * @param {{
+ *   data: Record<string, any>,
+ *   onChange: (name: string, value: any) => void
+ * }} props
+ */
 export default function Step6OtherParties({ data, onChange }) {
   return (
     <div className="space-y-8">

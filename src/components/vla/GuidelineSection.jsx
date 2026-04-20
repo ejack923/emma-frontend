@@ -1,5 +1,5 @@
 import React from "react";
-import { GUIDELINES, GUIDELINE_GROUPS } from "./guidelineCriteria";
+import { GUIDELINES } from "./guidelineCriteria";
 import GuidelineDrawer from "./GuidelineDrawer";
 import SignatureBox from "./SignatureBox";
 

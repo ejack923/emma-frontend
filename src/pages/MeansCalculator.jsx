@@ -170,38 +170,34 @@ const calculatorHtml = `<!DOCTYPE html>
             <option value="special">Special circumstances</option>
           </select>
           <div class="help">Low, medium and high cost categories affect the income threshold.</div>
-          <div id="specialCircsPanel" style="display:none;margin-top:10px;border:1px solid #fcd34d;border-radius:14px;overflow:hidden;font-size:13px;">
-            <div style="background:#fef3c7;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-              <span style="font-weight:700;color:#92400e;">Special circumstances guidelines</span>
-              <a href="https://www.handbook.vla.vic.gov.au/15-special-circumstances" target="_blank" style="font-size:11px;color:#b45309;text-decoration:none;">VLA Handbook Ch.15 ↗</a>
+          <div id="specialCircsPanel" style="display:none;margin-top:10px;width:min(560px,calc(100vw - 48px));border:1px solid #d1d5db;border-radius:14px;overflow:hidden;font-size:12px;background:#fff;box-shadow:0 8px 20px rgba(15,23,42,0.06);position:relative;z-index:2;">
+            <div style="padding:12px 14px 8px;border-bottom:1px solid #e5e7eb;">
+              <span style="font-weight:700;color:#374151;display:block;">Review Guidelines (Matters are manually assessed)</span>
             </div>
-            <div style="background:#fff;padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
-
-              <div style="border:1px solid #fde68a;border-radius:10px;overflow:hidden;">
-                <button onclick="toggleScSection('state')" id="scStateBtn" style="width:100%;padding:9px 12px;background:#fffbeb;border:none;color:#92400e;font-size:12px;font-weight:700;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;">
-                  <span>🏛 State special circumstances</span><span id="scStateArrow">▼</span>
-                </button>
-                <div id="scStateContent" style="display:none;padding:10px 12px;border-top:1px solid #fde68a;background:#fff;">
+            <div style="padding:10px 14px 14px;">
+              <div style="margin-bottom:10px;">
+                <select id="scGuideSelect" onchange="onScGuideChange()" style="width:100%;padding:10px 12px;background:#fff;border:1px solid #d1d5db;border-radius:10px;color:#374151;font-size:12px;font-weight:600;">
+                  <option value="">Select guideline...</option>
+                  <option value="state">State</option>
+                  <option value="cwlth">Commonwealth</option>
+                  <option value="docs">Requirements</option>
+                </select>
+              </div>
+              <div id="scStateContent" style="display:none;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;margin-bottom:8px;">
                   <p style="color:#78350f;margin:0 0 6px;line-height:1.5;">VLA may grant aid in a state matter if the person meets <strong>one</strong> of the following:</p>
-                  <ul style="color:#78350f;margin:0 0 8px;padding-left:16px;line-height:1.8;">
+                  <ul style="color:#78350f;margin:0 0 8px;padding-left:16px;line-height:1.7;">
                     <li>Is <strong>under 18 years old</strong></li>
                     <li>Has a <strong>reading or writing difficulty</strong></li>
                     <li>Has an <strong>intellectual disability</strong> (<em>Disability Act 2006</em> Vic)</li>
                     <li>Has a <strong>serious mental health issue</strong> and is receiving services from a designated mental health service (<em>Mental Health Act 2014</em> Vic)</li>
                   </ul>
                   <div style="background:#fef9c3;border-radius:8px;padding:7px 10px;color:#92400e;font-size:12px;">⚠️ Cannot be applied to traffic matters in the Magistrates' Court.</div>
-                </div>
               </div>
-
-              <div style="border:1px solid #fde68a;border-radius:10px;overflow:hidden;">
-                <button onclick="toggleScSection('cwlth')" id="scCwlthBtn" style="width:100%;padding:9px 12px;background:#fffbeb;border:none;color:#92400e;font-size:12px;font-weight:700;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;">
-                  <span>🇦🇺 Commonwealth special circumstances</span><span id="scCwlthArrow">▼</span>
-                </button>
-                <div id="scCwlthContent" style="display:none;padding:10px 12px;border-top:1px solid #fde68a;background:#fff;">
+              <div id="scCwlthContent" style="display:none;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;margin-bottom:8px;">
                   <p style="color:#78350f;margin:0 0 6px;line-height:1.5;"><strong>Criminal law:</strong> Person meets one of the State special circumstances above.</p>
-                  <p style="color:#78350f;margin:0 0 6px;line-height:1.5;"><strong>Non-urgent family law</strong> — one of the following applies:</p>
-                  <ul style="color:#78350f;margin:0;padding-left:16px;line-height:1.8;">
-                    <li>Allegation of <strong>family violence</strong> — person is a victim or affected family member</li>
+                  <p style="color:#78350f;margin:0 0 6px;line-height:1.5;"><strong>Non-urgent family law:</strong> one of the following applies:</p>
+                  <ul style="color:#78350f;margin:0;padding-left:16px;line-height:1.7;">
+                    <li>Allegation of <strong>family violence</strong> - person is a victim or affected family member</li>
                     <li><strong>Likelihood of family violence</strong></li>
                     <li>Concerns about <strong>safety, welfare or wellbeing of a child</strong> needing investigation</li>
                     <li><strong>Reading or writing difficulty</strong></li>
@@ -209,29 +205,21 @@ const calculatorHtml = `<!DOCTYPE html>
                     <li>Difficulty accessing legal assistance due to <strong>remote location</strong></li>
                     <li><strong>Aboriginal and/or Torres Strait Islander</strong> child/children</li>
                   </ul>
-                </div>
               </div>
-
-              <div style="border:1px solid #fde68a;border-radius:10px;overflow:hidden;">
-                <button onclick="toggleScSection('docs')" id="scDocsBtn" style="width:100%;padding:9px 12px;background:#fffbeb;border:none;color:#92400e;font-size:12px;font-weight:700;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;">
-                  <span>📄 Documentary requirements</span><span id="scDocsArrow">▼</span>
-                </button>
-                <div id="scDocsContent" style="display:none;padding:10px 12px;border-top:1px solid #fde68a;background:#fff;font-size:12px;color:#78350f;line-height:1.6;">
+              <div id="scDocsContent" style="display:none;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-size:12px;color:#78350f;line-height:1.6;">
                   <p style="margin:0 0 6px;">Must provide VLA with: written description of circumstances and impact on self-representation; evidence as below; any additional supporting information.</p>
-                  <p style="font-weight:700;margin:8px 0 3px;color:#92400e;">Reading or writing difficulty</p>
-                  <p style="margin:0 0 4px;">Statutory declaration from a professional with personal knowledge, or documents from support services confirming the difficulty cannot be resolved by interpreter/translator services.</p>
-                  <p style="font-weight:700;margin:8px 0 3px;color:#92400e;">Intellectual disability</p>
-                  <p style="margin:0 0 4px;">Evidence of: disability services from a registered provider; DFFH Secretary determination; NDIS participation for intellectual disability; or nature of disability from registered provider/NDIS/DFFH.</p>
-                  <div style="background:#fef9c3;border-radius:6px;padding:6px 9px;margin:4px 0 8px;color:#92400e;">⚠️ A GP letter alone is <strong>not sufficient</strong>.</div>
-                  <p style="font-weight:700;margin:0 0 3px;color:#92400e;">Serious mental health issue</p>
+                  <p style="font-weight:700;margin:0;color:#92400e;">Reading or writing difficulty</p>
+                  <p style="margin:0 0 6px;">Statutory declaration from a professional with personal knowledge, or documents from support services confirming the difficulty cannot be resolved by interpreter/translator services.</p>
+                  <p style="font-weight:700;margin:0;color:#92400e;">Intellectual disability</p>
+                  <p style="margin:0 0 6px;">Evidence of: disability services from a registered provider; DFFH Secretary determination; NDIS participation for intellectual disability; or nature of disability from registered provider/NDIS/DFFH.</p>
+                  <div style="background:#fef9c3;border-radius:6px;padding:6px 9px;color:#92400e;">⚠️ A GP letter alone is <strong>not sufficient</strong>.</div>
+                  <p style="font-weight:700;margin:6px 0 0;color:#92400e;">Serious mental health issue</p>
                   <p style="margin:0;">Evidence from a designated mental health service confirming the person is receiving services from that service.</p>
-                </div>
               </div>
-
             </div>
           </div>
         </div>
-        <div>
+        <div id="customCostWrap" style="display:none;">
           <label for="customCost">Custom legal matter cost ($)</label>
           <input id="customCost" type="number" min="0" step="1" value="0" />
           <div class="help">Used only when "Custom legal matter cost" is selected.</div>
@@ -576,18 +564,24 @@ const calculatorHtml = `<!DOCTYPE html>
 
   <script>
     const $ = (id) => document.getElementById(id);
-    function toggleScSection(section) {
-      const contentId = { state: 'scStateContent', cwlth: 'scCwlthContent', docs: 'scDocsContent' }[section];
-      const arrowId = { state: 'scStateArrow', cwlth: 'scCwlthArrow', docs: 'scDocsArrow' }[section];
-      const content = $(contentId);
-      const arrow = $(arrowId);
-      const isOpen = content.style.display !== 'none';
-      content.style.display = isOpen ? 'none' : 'block';
-      arrow.textContent = isOpen ? '▼' : '▲';
+    function onScGuideChange() {
+      const selected = $('scGuideSelect').value;
+      const sections = ['state', 'cwlth', 'docs'];
+      sections.forEach((key) => {
+        const content = $({ state: 'scStateContent', cwlth: 'scCwlthContent', docs: 'scDocsContent' }[key]);
+        content.style.display = key === selected ? 'block' : 'none';
+      });
     }
     function onMatterCategoryChange() {
-      const isSpecial = $('matterCategory').value === 'special';
+      const matterCategory = $('matterCategory').value;
+      const isSpecial = matterCategory === 'special';
+      const isCustom = matterCategory === 'custom';
       $('specialCircsPanel').style.display = isSpecial ? 'block' : 'none';
+      $('customCostWrap').style.display = isCustom ? 'block' : 'none';
+      if (!isSpecial && $('scGuideSelect')) {
+        $('scGuideSelect').value = '';
+        onScGuideChange();
+      }
       calculate();
     }
     const ids = ['matterCategory','customCost','region','appIncome','appIncomeFreq','partnerIncome','partnerIncomeFreq','incomeTax','medicare','housingType','housing','housingFreq','otherAccomType','otherAccommodation','otherAccomFreq','childcare','childcareFreq','businessExpenses','businessExpensesFreq','maintPerChild','maintFreq','childSupportChildren','hasPartner','dependants','cashSavings','vehicleEquity','homeEquity','otherAssets','pIncomeTax','pMedicare','pHousingType','pHousing','pHousingFreq','pOtherAccomType','pOtherAccommodation','pOtherAccomFreq','pChildcare','pChildcareFreq','pBusinessExpenses','pBusinessExpensesFreq','pMaintPerChild','pMaintFreq','pChildSupportChildren'];
@@ -764,3 +758,4 @@ export default function MeansCalculator() {
     </div>
   );
 }
+

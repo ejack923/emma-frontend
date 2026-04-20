@@ -29,6 +29,12 @@ const BENEFIT_OPTIONS = [
   { value: "Wife pension", label: "Wife pension*" }, { value: "Other", label: "Other" },
 ];
 
+/**
+ * @param {{
+ *   data: Record<string, any>,
+ *   onChange: (name: string, value: any) => void
+ * }} props
+ */
 export default function Step3Employment({ data, onChange }) {
   return (
     <div className="space-y-8">

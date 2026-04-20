@@ -1,5 +1,12 @@
 import { cn } from "@/lib/utils";
 
+/**
+ * @param {{
+ *   number?: string,
+ *   title: string,
+ *   className?: string
+ * }} props
+ */
 export default function SectionHeader({ number, title, className }) {
   return (
     <div className={cn("flex items-center gap-3 mb-6 pt-8 first:pt-0", className)}>

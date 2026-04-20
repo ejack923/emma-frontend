@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { createPageUrl } from "@/utils";
 import {
   FileText, Clipboard, ClipboardList, BookOpen,
-  Briefcase, Scale, FileCheck, FilePen, ChevronRight, Package, Car
+  Briefcase, Scale, FileCheck, FilePen, ChevronRight, Package, Car, Receipt, CalendarDays
 } from "lucide-react";
 import { addToBundle } from "@/components/BundleBar";
 
@@ -12,9 +12,7 @@ const tools = [
   { title: "LACW Intake Form", description: "Client intake form dedicated portal", icon: Clipboard, page: "IntakeForm" },
   { title: "LACW Guidelines", description: "VLA guideline certification portal", icon: BookOpen, page: "Guidelines" },
   { title: "VLA Report Worksheet", description: "Medical/Psychologist/Psychiatrist report worksheet", icon: ClipboardList, page: "VLAReportWorksheet" },
-  { title: "Additional Prep Worksheet", description: "Preparation fees worksheet — Senior Counsel", icon: Briefcase, page: "AdditionalPrepWorksheet" },
-  { title: "Additional Prep — Counsel", description: "Preparation fees worksheet — Counsel", icon: Scale, page: "AdditionalPrepCounsel" },
-  { title: "Additional Prep — Solicitor", description: "Preparation fees worksheet — Solicitor", icon: FileCheck, page: "AdditionalPrepSolicitor" },
+  { title: "Additional Prep Worksheet", description: "Preparation fees worksheet — Senior Counsel, Senior Junior Counsel, Junior Counsel, or Solicitor", icon: Briefcase, page: "AdditionalPrepWorksheet" },
   { title: "Memo Precedent", description: "Create a funding request memo", icon: FilePen, page: "MemoPrecedent" },
   { title: "Means Calculator", description: "VLA means test quick calculator", icon: Scale, page: "MeansCalculator" },
   { title: "VLA Criminal Law Tools", description: "Grant finder & fees payable — all in one", icon: Scale, page: "VLATools" },
@@ -22,6 +20,8 @@ const tools = [
   { title: "Staff Training Guide", description: "How to use all tools in the portal", icon: BookOpen, page: "TrainingGuide" },
   { title: "Backsheet to Counsel", description: "Prepare and print instructions for counsel", icon: FilePen, page: "BacksheetToCounsel" },
   { title: "Staff Travel Claims", description: "LACW travel allowance and expense claim form", icon: Car, page: "TravelClaims" },
+  { title: "Claim costs", description: "Open the claim costs workspace", icon: Receipt, page: "ClaimCosts" },
+  { title: "Aid Planner", description: "Portable aid, extension, and billing guidance planner", icon: CalendarDays, page: "AidPlanner" },
   { title: "Aid Request", description: "Submit an application for legal aid assistance", icon: FileCheck, page: "ApplyForAid" },
 ];
 

@@ -18,8 +18,9 @@ const localUser = {
 
 const LOCAL_USER_KEY = "deadline_guard_local_user";
 
-const INTEGRATION_MODE = import.meta.env.VITE_APP_INTEGRATION_MODE || "standalone";
-const API_BASE_URL = (import.meta.env.VITE_APP_API_BASE_URL || "").replace(/\/+$/, "");
+const APP_ENV = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
+const INTEGRATION_MODE = APP_ENV.VITE_APP_INTEGRATION_MODE || "standalone";
+const API_BASE_URL = (APP_ENV.VITE_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
 function getStoredUser() {
   try {
@@ -136,11 +137,11 @@ export const base44 = {
   },
   integrations: {
     Core: {
-      async SendEmail({ to, cc, subject, body }) {
+      async SendEmail({ to, cc, subject, body, ...rest }) {
         if (isRemoteMode()) {
-          return sendBackendEmail({ to, cc, subject, body });
+          return sendBackendEmail({ to, cc, subject, body, ...rest });
         }
-        return sendEmailStandalone({ to, cc, subject, body });
+        return sendEmailStandalone({ to, cc, subject, body, ...rest });
       },
       async UploadFile({ file }) {
         if (isRemoteMode()) {

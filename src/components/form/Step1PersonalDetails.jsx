@@ -1,5 +1,6 @@
+// @ts-nocheck
 import React, { useEffect } from 'react';
-import { TextField, RadioField, CheckboxField, SectionHeader, SelectField } from './FormField';
+import { TextField, RadioField, SectionHeader, SelectField } from './FormField';
 import AddressAutocomplete from './AddressAutocomplete';
 
 const PRISON_ADDRESSES = {

@@ -1,12 +1,33 @@
 import * as XLSX from "xlsx";
 
+const clampMinutes = (value) => {
+  const minutes = Math.floor(Number(value) || 0);
+  return Math.min(59, Math.max(0, minutes));
+};
+
+const formatHoursAndMinutes = (hours, minutes) => {
+  const hourValue = Math.max(0, Number(hours) || 0);
+  const minuteValue = clampMinutes(minutes);
+  const parts = [];
+
+  if (hourValue || !minuteValue) {
+    parts.push(`${hourValue} hour${hourValue === 1 ? "" : "s"}`);
+  }
+  if (minuteValue) {
+    parts.push(`${minuteValue} minute${minuteValue === 1 ? "" : "s"}`);
+  }
+
+  return parts.join(" ");
+};
+
 export function exportCounselExcel(form, calc) {
   const {
+    prepRole,
     clientName, vlaRefNo, chargeType, chargeDetails, caseType, stage, court,
     statements, committaltranscript, previousTrialTranscript, recordOfInterview,
     photographs, financialDocuments, transcriptsLDTI, surveillanceLogs,
     otherExhibits, otherExhibitsDetails, otherDocuments, otherDocumentsDetails,
-    excessScanningHours, videoAudioHours, videoAudioDetails,
+    excessScanningHours, videoAudioHours, videoAudioMinutes, videoAudioDetails,
     satisfiedPrep, satisfiedGrant,
     previousGrantMade, previousGrantDetails, nonsittingDays,
     practitionerName, signatureDate, firmNameAddress, reference,
@@ -16,10 +37,12 @@ export function exportCounselExcel(form, calc) {
     totalPerusals, perusalsHours, totalScanning, scanningHoursBase,
     scanningHours, videoHours, subtotal, billableHours, hourlyRate, preparationAmount,
   } = calc;
+  const videoDuration = formatHoursAndMinutes(videoAudioHours, videoAudioMinutes);
 
+  const roleLabel = prepRole || "Counsel";
   const rows = [
     ["APPLICATION FOR EXTENSION OF LEGAL ASSISTANCE"],
-    ["PREPARATION FEES WORKSHEET/CHECKLIST - COUNSEL - 2026 FEES"],
+    [`PREPARATION FEES WORKSHEET/CHECKLIST - ${roleLabel.toUpperCase()} - 2026 FEES`],
     ["For use by Section 29A Panel Practitioners (Simplified Grants Process)"],
     [],
     ["CLIENT NAME:", clientName, "", "", "", "VLA REF NO:", vlaRefNo],
@@ -49,7 +72,7 @@ export function exportCounselExcel(form, calc) {
     [" TOTAL scanning", totalScanning, "pages, which equates to", "", scanningHoursBase.toFixed(2), `hours at 180 pages/hr ("scanning")`],
     ...(scanningHoursBase > 10 ? [["", "", "", "", "", "", "If in excess of 10 hours allow", excessScanningHours, "hours"]] : []),
     ["Video/Audio Tapes/CDs"],
-    [" Video/Audio tapes/CDs", videoAudioHours, "hours", videoAudioDetails || "(Set out the disputed or material issues, the location and duration of the tapes / CDs that will need to be viewed or listened to.)"],
+    [" Video/Audio tapes/CDs", videoDuration, "", videoAudioDetails || "(Set out the disputed or material issues, the location and duration of the tapes / CDs that will need to be viewed or listened to.)"],
     [],
     [],
     ["Part C: Relevant guideline"],
@@ -111,5 +134,6 @@ export function exportCounselExcel(form, calc) {
   XLSX.utils.book_append_sheet(wb, ws, "PrepFees");
 
   const clientSlug = (clientName || "Client").replace(/\s+/g, "_");
-  XLSX.writeFile(wb, `PrepWorksheet_Counsel_${clientSlug}.xlsx`);
+  const roleSlug = roleLabel.replace(/\s+/g, "_");
+  XLSX.writeFile(wb, `PrepWorksheet_${roleSlug}_${clientSlug}.xlsx`);
 }

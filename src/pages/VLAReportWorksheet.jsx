@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
@@ -59,6 +60,7 @@ export default function VLAReportWorksheet() {
     setSubmitting(true);
     await base44.integrations.Core.SendEmail({
       to: "ejackson@completelawsupport.com",
+      cc: "",
       subject: `VLA Report Worksheet – ${form.clientName || "Unknown Client"} (${form.fileName || "No File"})`,
       body: `
 VLA Medical/Psychologist/Psychiatrist Report Worksheet

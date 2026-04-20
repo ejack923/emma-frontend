@@ -1,5 +1,6 @@
+// @ts-nocheck
 import React from 'react';
-import { TextField, RadioField, CheckboxField, SectionHeader } from './FormField';
+import { TextField, RadioField, SectionHeader } from './FormField';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";

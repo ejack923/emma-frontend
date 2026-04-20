@@ -6,7 +6,83 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export function TextField({ label, name, value, onChange, placeholder, type = "text", required }) {
+/**
+ * @typedef {{ value: string, label: string }} ChoiceOption
+ */
+
+/**
+ * @typedef {{
+ *   label: string,
+ *   name: string,
+ *   value?: string,
+ *   onChange: (name: string, value: string) => void,
+ *   placeholder?: string,
+ *   type?: string,
+ *   required?: boolean
+ * }} TextFieldProps
+ */
+
+/**
+ * @typedef {{
+ *   label: string,
+ *   name: string,
+ *   value?: string,
+ *   onChange: (name: string, value: string) => void,
+ *   placeholder?: string,
+ *   rows?: number
+ * }} TextAreaFieldProps
+ */
+
+/**
+ * @typedef {{
+ *   label: string,
+ *   name: string,
+ *   value?: string,
+ *   onChange: (name: string, value: string) => void,
+ *   options?: ChoiceOption[],
+ *   inline?: boolean
+ * }} RadioFieldProps
+ */
+
+/**
+ * @typedef {{
+ *   label: string,
+ *   name: string,
+ *   checked?: boolean,
+ *   onChange: (name: string, value: boolean) => void
+ * }} CheckboxFieldProps
+ */
+
+/**
+ * @typedef {{
+ *   label: string,
+ *   name: string,
+ *   values?: string[],
+ *   onChange: (name: string, value: string[]) => void,
+ *   options?: ChoiceOption[]
+ * }} CheckboxGroupProps
+ */
+
+/**
+ * @typedef {{
+ *   label: string,
+ *   name: string,
+ *   value?: string,
+ *   onChange: (name: string, value: string) => void,
+ *   options?: ChoiceOption[],
+ *   placeholder?: string
+ * }} SelectFieldProps
+ */
+
+/**
+ * @typedef {{
+ *   number?: string,
+ *   title: string
+ * }} SectionHeaderProps
+ */
+
+/** @param {TextFieldProps} props */
+export function TextField({ label, name, value, onChange, placeholder = "", type = "text", required = false }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={name} className="text-sm font-medium text-gray-700">
@@ -24,7 +100,8 @@ export function TextField({ label, name, value, onChange, placeholder, type = "t
   );
 }
 
-export function TextAreaField({ label, name, value, onChange, placeholder, rows = 4 }) {
+/** @param {TextAreaFieldProps} props */
+export function TextAreaField({ label, name, value, onChange, placeholder = "", rows = 4 }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={name} className="text-sm font-medium text-gray-700">{label}</Label>
@@ -40,7 +117,8 @@ export function TextAreaField({ label, name, value, onChange, placeholder, rows 
   );
 }
 
-export function RadioField({ label, name, value, onChange, options, inline = true }) {
+/** @param {RadioFieldProps} props */
+export function RadioField({ label, name, value, onChange, options = [], inline = true }) {
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-gray-700">{label}</Label>
@@ -60,7 +138,8 @@ export function RadioField({ label, name, value, onChange, options, inline = tru
   );
 }
 
-export function CheckboxField({ label, name, checked, onChange }) {
+/** @param {CheckboxFieldProps} props */
+export function CheckboxField({ label, name, checked = false, onChange }) {
   return (
     <div className="flex items-start gap-2.5">
       <Checkbox
@@ -74,8 +153,10 @@ export function CheckboxField({ label, name, checked, onChange }) {
   );
 }
 
-export function CheckboxGroup({ label, name, values, onChange, options }) {
+/** @param {CheckboxGroupProps} props */
+export function CheckboxGroup({ label, name, values = [], onChange, options = [] }) {
   const current = values || [];
+  /** @param {string} optValue */
   const handleToggle = (optValue) => {
     const updated = current.includes(optValue)
       ? current.filter(v => v !== optValue)
@@ -103,13 +184,14 @@ export function CheckboxGroup({ label, name, values, onChange, options }) {
   );
 }
 
-export function SelectField({ label, name, value, onChange, options, placeholder }) {
+/** @param {SelectFieldProps} props */
+export function SelectField({ label, name, value, onChange, options = [], placeholder = "Select..." }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-sm font-medium text-gray-700">{label}</Label>
       <Select value={value || ""} onValueChange={(val) => onChange(name, val)}>
         <SelectTrigger className="h-10 border-gray-200 focus:border-[#0071BC] focus:ring-[#0071BC]/20">
-          <SelectValue placeholder={placeholder || "Select..."} />
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {options.map((opt) => (
@@ -121,6 +203,7 @@ export function SelectField({ label, name, value, onChange, options, placeholder
   );
 }
 
+/** @param {SectionHeaderProps} props */
 export function SectionHeader({ number, title }) {
   return (
     <div className="flex items-center gap-3 pb-3 border-b border-[#0071BC]/20 mb-5">
