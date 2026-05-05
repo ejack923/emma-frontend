@@ -383,6 +383,9 @@ function extractTemplateGuideline(lines = []) {
     ) {
       return true;
     }
+    if (/guideline for the primary matter/i.test(normalized)) {
+      return true;
+    }
     return normalized.length < 5;
   };
 
