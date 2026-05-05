@@ -140,7 +140,6 @@ export function createPlanner() {
       aidType: "",
       aidTypeList: [],
       guideline: "",
-      guidelineResponse: "",
       aidNumber: "",
       extensionNumber: "",
       effectiveDate: "",

@@ -116,7 +116,6 @@ function applyImportedMatter(prev, adapter, selectedMatter) {
     ? {
         ...prev.aid,
         guideline: selectedMatter.aid.guideline || prev.aid.guideline,
-        guidelineResponse: selectedMatter.aid.guidelineResponse || prev.aid.guidelineResponse,
       }
     : prev.aid;
 
