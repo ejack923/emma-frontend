@@ -128,7 +128,7 @@ export const actionstepAdapter = createPracticeManagerAdapter({
         summary: "Contest mention for summary offences requiring aid assessment.",
       },
       aid: {
-        guideline: "G7 Immediate imprisonment is a likelihood: YES",
+        guideline: "GUILTY PLEA",
       },
     },
   ],
