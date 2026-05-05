@@ -1,5 +1,7 @@
 import { inflate } from "pako";
-import { getDocument } from "pdfjs-dist/build/pdf.mjs";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/build/pdf.mjs";
+
+GlobalWorkerOptions.workerSrc = "/pdfjs/legacy/build/pdf.worker.mjs";
 
 const PDFJS_BROWSER_OPTIONS = {
   disableWorker: true,

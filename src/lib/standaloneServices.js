@@ -1,6 +1,8 @@
 import { inflate } from "pako";
-import { getDocument } from "pdfjs-dist/build/pdf.mjs";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/build/pdf.mjs";
 import { createWorker } from "tesseract.js";
+
+GlobalWorkerOptions.workerSrc = "/pdfjs/legacy/build/pdf.worker.mjs";
 
 const OUTBOX_KEY = "demo_standalone_outbox";
 const UPLOADS_KEY = "demo_standalone_uploads";
