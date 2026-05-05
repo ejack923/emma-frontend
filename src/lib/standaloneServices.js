@@ -5,6 +5,7 @@ import { createWorker } from "tesseract.js";
 const OUTBOX_KEY = "demo_standalone_outbox";
 const UPLOADS_KEY = "demo_standalone_uploads";
 const LEGAL_AID_APPLICATIONS_KEY = "demo_legal_aid_applications";
+const LEGACY_PDFJS_MODULE_URL = "/pdfjs/legacy/build/pdf.mjs";
 let diaryOcrWorkerPromise = null;
 const PDFJS_BROWSER_OPTIONS = {
   disableWorker: true,
@@ -906,7 +907,7 @@ async function extractPdfTextWithPdfJs(fileUrl = "") {
   }
 
   try {
-    const legacyPdfJs = await import(/* @vite-ignore */ "/pdfjs/legacy/build/pdf.mjs");
+    const legacyPdfJs = await import(/* @vite-ignore */ LEGACY_PDFJS_MODULE_URL);
     return await extractWithDocument(legacyPdfJs.getDocument);
   } catch {
     return "";
@@ -960,7 +961,7 @@ async function extractPdfTextWithOcr(fileUrl = "") {
   }
 
   try {
-    const legacyPdfJs = await import(/* @vite-ignore */ "/pdfjs/legacy/build/pdf.mjs");
+    const legacyPdfJs = await import(/* @vite-ignore */ LEGACY_PDFJS_MODULE_URL);
     return await extractWithDocument(legacyPdfJs.getDocument);
   } catch {
     return "";
@@ -1354,7 +1355,7 @@ async function extractDiaryEntriesFromPdf(fileUrl = "") {
         const base64 = String(fileUrl).split(",")[1] || "";
         if (!base64) return "";
         const data = decodeBase64ToBytes(base64);
-        const legacyPdfJs = await import(/* @vite-ignore */ "/pdfjs/legacy/build/pdf.mjs");
+        const legacyPdfJs = await import(/* @vite-ignore */ LEGACY_PDFJS_MODULE_URL);
         const loadingTask = legacyPdfJs.getDocument({
           data,
           ...PDFJS_BROWSER_OPTIONS,
