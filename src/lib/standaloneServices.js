@@ -1,6 +1,19 @@
+import { inflate } from "pako";
+import { getDocument } from "pdfjs-dist/build/pdf.mjs";
+import { createWorker } from "tesseract.js";
+
 const OUTBOX_KEY = "demo_standalone_outbox";
 const UPLOADS_KEY = "demo_standalone_uploads";
 const LEGAL_AID_APPLICATIONS_KEY = "demo_legal_aid_applications";
+let diaryOcrWorkerPromise = null;
+const PDFJS_BROWSER_OPTIONS = {
+  disableWorker: true,
+  useSystemFonts: true,
+  isEvalSupported: false,
+  cMapUrl: "/pdfjs/cmaps/",
+  cMapPacked: true,
+  standardFontDataUrl: "/pdfjs/standard_fonts/",
+};
 
 function createBarristerList(prefix, names, email = "", phone = "") {
   return names.map((name, index) => ({
@@ -768,11 +781,688 @@ function answerLegalQuestion(prompt = "") {
   return "I can help with VLA workflow questions, grants, costs payable, briefing process, and practical next steps. Give me the matter type and the decision you need to make.";
 }
 
-function createStandaloneDiaryError() {
-  /** @type {Error & { code?: string }} */
-  const error = new Error("Standalone mode is active. PDF diary extraction needs a separate AI/file service. Set VITE_APP_INTEGRATION_MODE=remote and VITE_APP_API_BASE_URL to enable it.");
-  error.code = "STANDALONE_EXTRACTION_UNAVAILABLE";
-  return error;
+function decodePdfString(value = "") {
+  return value
+    .replace(/\\([\\()])/g, "$1")
+    .replace(/\\r/g, "\r")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\000/g, "")
+    .trim();
+}
+
+function uint8ArrayToLatin1String(bytes) {
+  let output = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    output += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return output;
+}
+
+function latin1StringToUint8Array(value = "") {
+  const bytes = new Uint8Array(value.length);
+  for (let i = 0; i < value.length; i += 1) {
+    bytes[i] = value.charCodeAt(i) & 0xff;
+  }
+  return bytes;
+}
+
+function decodeBase64ToBytes(base64 = "") {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function extractTextOperatorsFromPdfText(text = "") {
+  if (!text) return [];
+
+  const tjMatches = [...text.matchAll(/\(([^()]*(?:\\.[^()]*)*)\)\s*Tj/g)].map((item) =>
+    decodePdfString(item[1])
+  );
+  const tjArrayMatches = [...text.matchAll(/\[(.*?)\]\s*TJ/gs)].flatMap((item) =>
+    [...item[1].matchAll(/\(([^()]*(?:\\.[^()]*)*)\)/g)].map((inner) => decodePdfString(inner[1]))
+  );
+  const quoteMatches = [...text.matchAll(/\(([^()]*(?:\\.[^()]*)*)\)\s*['"]/g)].map((item) =>
+    decodePdfString(item[1])
+  );
+
+  return [...tjMatches, ...tjArrayMatches, ...quoteMatches].filter(Boolean);
+}
+
+function extractPdfTextFromDataUrl(fileUrl = "") {
+  const base64 = String(fileUrl).split(",")[1] || "";
+  if (!base64) return "";
+
+  const bytes = decodeBase64ToBytes(base64);
+  const latin1 = uint8ArrayToLatin1String(bytes);
+  const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  const pieces = [];
+  let match;
+
+  while ((match = streamRegex.exec(latin1))) {
+    const streamChunk = match[1] || "";
+    try {
+      const inflated = inflate(latin1StringToUint8Array(streamChunk));
+      const text = new TextDecoder("latin1").decode(inflated);
+      pieces.push(...extractTextOperatorsFromPdfText(text));
+    } catch {
+      pieces.push(...extractTextOperatorsFromPdfText(streamChunk));
+    }
+  }
+
+  if (pieces.length === 0) {
+    pieces.push(...extractTextOperatorsFromPdfText(latin1));
+  }
+
+  return pieces
+    .filter(Boolean)
+    .join("\n")
+    .replace(/\s+\n/g, "\n")
+    .trim();
+}
+
+async function getDiaryOcrWorker() {
+  if (!diaryOcrWorkerPromise) {
+    diaryOcrWorkerPromise = createWorker("eng").then(async (worker) => {
+      await worker.setParameters({
+        preserve_interword_spaces: "1",
+      });
+      return worker;
+    });
+  }
+  return diaryOcrWorkerPromise;
+}
+
+async function extractPdfTextWithPdfJs(fileUrl = "") {
+  const base64 = String(fileUrl).split(",")[1] || "";
+  if (!base64) return "";
+
+  const data = decodeBase64ToBytes(base64);
+  const extractWithDocument = async (loadDocument) => {
+    const loadingTask = loadDocument({
+      data,
+      ...PDFJS_BROWSER_OPTIONS,
+    });
+    const pdf = await loadingTask.promise;
+    const pieces = [];
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const strings = (content.items || []).map((item) => item?.str || "").filter(Boolean);
+      pieces.push(...strings);
+    }
+
+    return pieces.join("\n").trim();
+  };
+
+  const primaryText = await extractWithDocument(getDocument).catch(() => "");
+  if (primaryText) {
+    return primaryText;
+  }
+
+  try {
+    const legacyPdfJs = await import(/* @vite-ignore */ "/pdfjs/legacy/build/pdf.mjs");
+    return await extractWithDocument(legacyPdfJs.getDocument);
+  } catch {
+    return "";
+  }
+}
+
+async function extractPdfTextWithOcr(fileUrl = "") {
+  const base64 = String(fileUrl).split(",")[1] || "";
+  if (!base64) return "";
+
+  const data = decodeBase64ToBytes(base64);
+  const worker = await getDiaryOcrWorker();
+  const extractWithDocument = async (loadDocument) => {
+    const loadingTask = loadDocument({
+      data,
+      ...PDFJS_BROWSER_OPTIONS,
+    });
+    const pdf = await loadingTask.promise;
+    const pageTexts = [];
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) continue;
+
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+
+      await page.render({
+        canvasContext: context,
+        viewport,
+      }).promise;
+
+      const {
+        data: { text = "" },
+      } = await worker.recognize(canvas);
+
+      if (text.trim()) {
+        pageTexts.push(text);
+      }
+    }
+
+    return pageTexts.join("\n").trim();
+  };
+
+  const primaryText = await extractWithDocument(getDocument).catch(() => "");
+  if (primaryText) {
+    return primaryText;
+  }
+
+  try {
+    const legacyPdfJs = await import(/* @vite-ignore */ "/pdfjs/legacy/build/pdf.mjs");
+    return await extractWithDocument(legacyPdfJs.getDocument);
+  } catch {
+    return "";
+  }
+}
+
+function normalizeDiaryText(text = "") {
+  return String(text || "")
+    .replace(/\u0000/g, " ")
+    .replace(/\r/g, "\n")
+    .replace(/[\u2013\u2014]/g, " - ")
+    .replace(/[\u2022\u00b7]/g, " ")
+    .replace(/[â€“â€”]/g, " - ")
+    .replace(/[â€¢Â·]/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
+function isDateHeading(line = "") {
+  return /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s+[a-z]+\s+\d{1,2},?\s+\d{4}$/i.test(line.trim());
+}
+
+function isCourtHeading(line = "") {
+  const value = line.trim();
+  return /(magistrates'?\s+court|county\s+court|supreme\s+court|children'?s\s+court|court of appeal|drug court)/i.test(value);
+}
+
+function parseDiaryDate(line = "") {
+  const match = line.match(/^(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s+([a-z]+)\s+(\d{1,2}),?\s+(\d{4})$/i);
+  if (!match) return "";
+  const monthMap = {
+    january: "01",
+    february: "02",
+    march: "03",
+    april: "04",
+    may: "05",
+    june: "06",
+    july: "07",
+    august: "08",
+    september: "09",
+    october: "10",
+    november: "11",
+    december: "12",
+  };
+  const month = monthMap[match[1].toLowerCase()] || "";
+  if (!month) return "";
+  return `${String(match[2]).padStart(2, "0")}/${month}/${match[3]}`;
+}
+
+function cleanDiaryLine(line = "") {
+  return String(line || "").replace(/\s+/g, " ").trim();
+}
+
+function isLikelyDiaryEntryStart(line = "") {
+  return /^([A-Z][A-Za-z'' -]+|[A-Z'' -]+),\s*[A-Z][A-Za-z'' -]+/.test(line.trim());
+}
+
+function normalizeDiaryDashSpacing(line = "") {
+  return String(line || "")
+    .replace(/\s*[–—-]\s*/g, " - ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractCourtName(line = "") {
+  const normalized = cleanDiaryLine(line)
+    .replace(/^(A REMANDS)\b.*/i, "$1")
+    .replace(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\/\d{1,2}\/\d{2,4}.*$/i, "")
+    .replace(/\bLocation:.*$/i, "")
+    .replace(/\(All day\).*$/i, "")
+    .replace(/[]/g, "")
+    .trim();
+
+  return normalized;
+}
+
+function isDiaryMetaLine(line = "") {
+  const value = cleanDiaryLine(line);
+  if (!value) return true;
+  if (/^\d+\.$/.test(value)) return true;
+  if (/^Location:?$/i.test(value)) return true;
+  if (/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\/\d{1,2}\/\d{2,4}/i.test(value)) return true;
+  if (/^(All day)$/i.test(value)) return true;
+  if (/^(by|via|in person|to org)\b/i.test(value)) return true;
+  if (/^[A-Z]{1,4}(?:\s*[;/]\s*[A-Z]{1,4})?\s+(?:by|via|in person|to org)\b/i.test(value)) return true;
+  if (/^Counsel briefed\b/i.test(value)) return true;
+  if (/^[A-Z]{1,4}[;/]\s*[A-Z]{1,4}$/i.test(value)) return true;
+  return false;
+}
+
+function splitClientHeadAndTail(block = "") {
+  const normalized = normalizeDiaryDashSpacing(block);
+  const separatorIndex = normalized.indexOf(" - ");
+  if (separatorIndex === -1) {
+    return { head: normalized, tail: "" };
+  }
+  return {
+    head: normalized.slice(0, separatorIndex).trim(),
+    tail: normalized.slice(separatorIndex + 3).trim(),
+  };
+}
+
+function parseDiaryEntryBlock(block = "", currentDate = "", currentCourt = "") {
+  const normalized = normalizeDiaryDashSpacing(block).replace(/^\d+\.\s*/, "");
+  if (!normalized) return null;
+
+  const { head, tail } = splitClientHeadAndTail(normalized);
+  if (!head) return null;
+
+  let client_name = head;
+  let grant_type = "";
+  let appearance_type = "";
+
+  let match = head.match(/^(.*?)(?:\s*\((VC|VU|VLA|L|V|pending)\))\s*$/i);
+  if (match) {
+    client_name = cleanDiaryLine(match[1]);
+    grant_type = cleanDiaryLine(match[2]);
+  } else {
+    match = head.match(/^(.*?)(?:\s*\((VC|VU|VLA|L|V|pending)\))\s+(.+)$/i);
+    if (match) {
+      client_name = cleanDiaryLine(match[1]);
+      grant_type = cleanDiaryLine(match[2]);
+      appearance_type = cleanDiaryLine(match[3]);
+    }
+  }
+
+  client_name = cleanDiaryLine(client_name).replace(/[()]+$/g, "").trim();
+  if (!isLikelyDiaryEntryStart(client_name)) return null;
+
+  const segments = tail
+    .split(/\s+-\s+/)
+    .map(cleanDiaryLine)
+    .filter(Boolean);
+
+  if (!appearance_type) {
+    appearance_type = cleanDiaryLine(segments.shift() || "");
+  }
+
+  let lawyer_initials = "";
+  let counsel_briefed = "";
+  let outcomeSegments = [];
+
+  const firstDetail = cleanDiaryLine(segments.shift() || "");
+  if (looksLikeInitials(firstDetail)) {
+    lawyer_initials = firstDetail;
+  } else if (firstDetail) {
+    const initialsWithTail = firstDetail.match(/^([A-Z]{1,8}(?:\/[A-Z]{1,8})?)\s+(.*)$/);
+    if (initialsWithTail) {
+      lawyer_initials = cleanDiaryLine(initialsWithTail[1]);
+      if (initialsWithTail[2]) {
+        outcomeSegments.push(cleanDiaryLine(initialsWithTail[2]));
+      }
+    } else if (/briefed/i.test(firstDetail)) {
+      counsel_briefed = firstDetail;
+    } else {
+      outcomeSegments.push(firstDetail);
+    }
+  }
+
+  for (const segment of segments) {
+    if (!segment) continue;
+    if (!counsel_briefed && /briefed/i.test(segment)) {
+      counsel_briefed = segment;
+      continue;
+    }
+    if (!lawyer_initials && looksLikeInitials(segment)) {
+      lawyer_initials = segment;
+      continue;
+    }
+    outcomeSegments.push(segment);
+  }
+
+  const outcome = cleanDiaryLine(outcomeSegments.join(" - "));
+  const nextDateMatch =
+    outcome.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/) ||
+    outcome.match(/\b(\d{1,2}\s+[A-Za-z]+\s+\d{2,4})\b/);
+  const claimable = /^(vc|l|vla)$/i.test(grant_type);
+
+  return {
+    date: currentDate,
+    client_name,
+    grant_type,
+    court: currentCourt,
+    appearance_type,
+    lawyer_initials,
+    counsel_briefed,
+    outcome,
+    next_date: nextDateMatch ? nextDateMatch[1] : "",
+    claimable,
+    atlas_claim_type: claimable ? suggestAtlasClaimType(appearance_type, outcome) : "",
+    notes: "",
+  };
+}
+
+function extractDiaryEntryBlocksWithContext(text = "") {
+  const lines = String(text || "")
+    .split("\n")
+    .map(cleanDiaryLine)
+    .filter(Boolean);
+
+  const entries = [];
+  let currentDate = "";
+  let currentCourt = "";
+  let currentBlock = "";
+
+  const flushCurrentBlock = () => {
+    const parsed = parseDiaryEntryBlock(currentBlock, currentDate, currentCourt);
+    if (parsed) {
+      entries.push(parsed);
+    }
+    currentBlock = "";
+  };
+
+  for (const rawLine of lines) {
+    const line = normalizeDiaryDashSpacing(rawLine);
+    if (!line) continue;
+
+    if (isDateHeading(line)) {
+      flushCurrentBlock();
+      currentDate = parseDiaryDate(line);
+      continue;
+    }
+
+    if (isCourtHeading(line) || /\b(?:Magistrates'? Court|County Court|Supreme Court|Neighbourhood Justice Centre|Koori Court|A REMANDS)\b/i.test(line)) {
+      flushCurrentBlock();
+      currentCourt = extractCourtName(line);
+      continue;
+    }
+
+    if (isDiaryMetaLine(line)) {
+      continue;
+    }
+
+    const lineWithoutNumber = line.replace(/^\d+\.\s*/, "");
+    if (isLikelyDiaryEntryStart(lineWithoutNumber)) {
+      flushCurrentBlock();
+      currentBlock = lineWithoutNumber;
+      continue;
+    }
+
+    if (currentBlock) {
+      currentBlock = `${currentBlock} ${lineWithoutNumber}`.trim();
+    }
+  }
+
+  flushCurrentBlock();
+  return entries;
+}
+
+function prepareDiaryLines(text = "") {
+  const withEntryBreaks = String(text || "").replace(
+    /(^|[\n ])((?:[A-Z][A-Za-z' -]+|[A-Z' -]+),\s*[A-Z][A-Za-z' -]+(?:\s*\([^)]+\))?\s*[\u2013-])/gm,
+    (_match, prefix, entryStart) => `${prefix}\n${entryStart}`
+  );
+
+  return withEntryBreaks
+    .split("\n")
+    .map(cleanDiaryLine)
+    .filter(Boolean);
+}
+
+function buildEntryBlocks(text = "") {
+  const normalized = cleanDiaryLine(text);
+  if (!normalized) return [];
+
+  const entryStartRegex = /([A-Z][A-Za-z' -]+|[A-Z' -]+),\s*[A-Z][A-Za-z' -]+(?:\s*\([^)]+\))?\s*[\u2013-]/g;
+  const matches = [...normalized.matchAll(entryStartRegex)];
+  if (matches.length === 0) return [];
+
+  return matches.map((match, index) => {
+    const start = match.index ?? 0;
+    const end = index + 1 < matches.length ? matches[index + 1].index ?? normalized.length : normalized.length;
+    return cleanDiaryLine(normalized.slice(start, end));
+  }).filter(Boolean);
+}
+
+function mergeDiaryLines(lines = []) {
+  const merged = [];
+  for (const rawLine of lines) {
+    const line = cleanDiaryLine(rawLine);
+    if (!line) continue;
+    if (isDateHeading(line) || isCourtHeading(line) || isLikelyDiaryEntryStart(line)) {
+      merged.push(line);
+      continue;
+    }
+    if (merged.length > 0) {
+      merged[merged.length - 1] = `${merged[merged.length - 1]} ${line}`.trim();
+    } else {
+      merged.push(line);
+    }
+  }
+  return merged;
+}
+
+function suggestAtlasClaimType(appearanceType = "", outcome = "") {
+  const appearance = String(appearanceType || "").toLowerCase();
+  const outcomeText = String(outcome || "").toLowerCase();
+
+  if (/adj|adjourn/.test(outcomeText) && /\bfor\b/.test(outcomeText)) {
+    return "Confirm adj type";
+  }
+  if (appearance.includes("contest")) return "Contest hearing appearance";
+  if (appearance.includes("sentence") || appearance.includes("return for sentence")) return "Appearance on sentence or adjournment";
+  if (appearance.includes("bail")) return "Bail appearance fee";
+  if (appearance.includes("committal mention")) return "Committal mention / case conference appearance";
+  if (appearance.includes("arc review")) return "ARC Ã¢â‚¬â€œ Review Hearing";
+  if (appearance.includes("case assessment")) return "Active Case Management Ã¢â‚¬â€œ case assessment hearing";
+  if (appearance.includes("sentence indication")) return "Sentence indication";
+  if (appearance.includes("plea")) return "Plea Ã¢â‚¬â€œ appearance fee (first day)";
+  if (appearance.includes("trial")) return "Trial Ã¢â‚¬â€œ appearance fee (first day)";
+  if (appearance.includes("direction") || appearance.includes("callover")) return "Directions hearing / mention / callover";
+  if (appearance.includes("mention") || appearance.includes("adjourn")) return "Daily appearance fee";
+  return "";
+}
+
+function looksLikeGrantType(value = "") {
+  return /^(vc|vla|l|v|vu|pending)$/i.test(cleanDiaryLine(value));
+}
+
+function looksLikeInitials(value = "") {
+  return /^[A-Z]{1,8}$/.test(cleanDiaryLine(value));
+}
+
+function parseDiaryEntry(line = "", currentDate = "", currentCourt = "") {
+  const segments = line.split(/\s+[\u2013-]\s+/).map(cleanDiaryLine).filter(Boolean);
+  if (segments.length < 2) return null;
+
+  const headMatch = segments[0].match(/^([^()]+?)\s*(?:\(([^)]+)\))?$/);
+  if (!headMatch) return null;
+
+  const client_name = cleanDiaryLine(headMatch[1]);
+  let grant_type = cleanDiaryLine(headMatch[2] || "");
+  let appearance_type = "";
+  let lawyer_initials = "";
+  let outcome = "";
+
+  let cursor = 1;
+  if (!grant_type && looksLikeGrantType(segments[cursor])) {
+    grant_type = cleanDiaryLine(segments[cursor]);
+    cursor += 1;
+  }
+
+  appearance_type = cleanDiaryLine(segments[cursor] || "");
+  cursor += 1;
+
+  const initialsCandidate = segments[cursor] || "";
+  if (looksLikeInitials(initialsCandidate)) {
+    lawyer_initials = cleanDiaryLine(initialsCandidate);
+    cursor += 1;
+  } else {
+    const initialsMatch = initialsCandidate.match(/^([A-Z]{1,8})\s+(.*)$/);
+    if (initialsMatch) {
+      lawyer_initials = cleanDiaryLine(initialsMatch[1]);
+      outcome = cleanDiaryLine(initialsMatch[2]);
+      cursor += 1;
+    }
+  }
+
+  if (!outcome) {
+    outcome = segments.slice(cursor).join(" - ");
+  }
+
+  if (!client_name || !appearance_type) return null;
+
+  const nextDateMatch = outcome.match(/\b(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/);
+  const claimable = /^(vc|l|vla)$/i.test(grant_type);
+
+  return {
+    date: currentDate,
+    client_name,
+    grant_type,
+    court: currentCourt,
+    appearance_type,
+    lawyer_initials,
+    counsel_briefed: "",
+    outcome,
+    next_date: nextDateMatch ? nextDateMatch[1] : "",
+    claimable,
+    atlas_claim_type: claimable ? suggestAtlasClaimType(appearance_type, outcome) : "",
+    notes: "",
+  };
+}
+
+async function extractDiaryEntriesFromPdf(fileUrl = "") {
+  const pdfJsText = await extractPdfTextWithPdfJs(fileUrl).catch(() => "");
+  let legacyText = "";
+  if (!pdfJsText) {
+    legacyText = await (async () => {
+      try {
+        const base64 = String(fileUrl).split(",")[1] || "";
+        if (!base64) return "";
+        const data = decodeBase64ToBytes(base64);
+        const legacyPdfJs = await import(/* @vite-ignore */ "/pdfjs/legacy/build/pdf.mjs");
+        const loadingTask = legacyPdfJs.getDocument({
+          data,
+          ...PDFJS_BROWSER_OPTIONS,
+        });
+        const pdf = await loadingTask.promise;
+        const pieces = [];
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          pieces.push(...(content.items || []).map((item) => item?.str || "").filter(Boolean));
+        }
+        return pieces.join("\n").trim();
+      } catch {
+        return "";
+      }
+    })();
+  }
+  const streamText = extractPdfTextFromDataUrl(fileUrl);
+  const ocrText = await extractPdfTextWithOcr(fileUrl).catch(() => "");
+
+  const evaluateCandidate = (label, text = "") => {
+    const normalized = normalizeDiaryText(text);
+    const debug = {
+      source: label,
+      normalizedLength: normalized.length,
+      contextEntriesCount: 0,
+      mergedLineCount: 0,
+      fallbackEntriesCount: 0,
+    };
+
+    if (!normalized) {
+      return { label, normalized, entries: [], debug };
+    }
+
+    const contextEntries = extractDiaryEntryBlocksWithContext(normalized);
+    debug.contextEntriesCount = contextEntries.length;
+    if (contextEntries.length > 1) {
+      return { label, normalized, entries: contextEntries, debug };
+    }
+
+    const mergedLines = mergeDiaryLines(prepareDiaryLines(normalized));
+    debug.mergedLineCount = mergedLines.length;
+    let currentDate = "";
+    let currentCourt = "";
+    const entries = [];
+
+    for (const line of mergedLines) {
+      if (isDateHeading(line)) {
+        currentDate = parseDiaryDate(line);
+        continue;
+      }
+      if (isCourtHeading(line)) {
+        currentCourt = line;
+        continue;
+      }
+      const entry = parseDiaryEntry(line, currentDate, currentCourt);
+      if (entry) entries.push(entry);
+    }
+
+    if (entries.length <= 1) {
+      const blockEntries = buildEntryBlocks(normalized)
+        .map((block) => parseDiaryEntry(block, currentDate, currentCourt))
+        .filter(Boolean);
+      debug.fallbackEntriesCount = blockEntries.length;
+
+      if (blockEntries.length > entries.length) {
+        return { label, normalized, entries: blockEntries, debug };
+      }
+    }
+
+    return { label, normalized, entries, debug };
+  };
+
+  const candidates = [
+    evaluateCandidate("pdfjs", pdfJsText),
+    evaluateCandidate("legacy", legacyText),
+    evaluateCandidate("stream", streamText),
+    evaluateCandidate("ocr", ocrText),
+  ];
+
+  const best = candidates
+    .slice()
+    .sort((a, b) => {
+      if (b.entries.length !== a.entries.length) return b.entries.length - a.entries.length;
+      return (b.normalized?.length || 0) - (a.normalized?.length || 0);
+    })[0];
+
+  const debug = {
+    pdfJsTextLength: pdfJsText.length,
+    legacyTextLength: legacyText.length,
+    streamTextLength: streamText.length,
+    ocrTextLength: ocrText.length,
+    selectedSource: best?.label || "",
+    normalizedLength: best?.debug?.normalizedLength || 0,
+    contextEntriesCount: best?.debug?.contextEntriesCount || 0,
+    mergedLineCount: best?.debug?.mergedLineCount || 0,
+    fallbackEntriesCount: best?.debug?.fallbackEntriesCount || 0,
+  };
+
+  if (!best?.normalized) {
+    return { entries: [], summary: "No readable text found in the uploaded PDF, even after OCR.", debug };
+  }
+
+  const entries = best.entries || [];
+  const claimableCount = entries.filter((entry) => entry.claimable !== false).length;
+  const usedOcr = best.label === "ocr";
+  const summary = `Extracted ${entries.length} diary entr${entries.length === 1 ? "y" : "ies"}, including ${claimableCount} claimable entr${claimableCount === 1 ? "y" : "ies"}.${usedOcr ? " OCR was used for this PDF." : ""}`;
+  return { entries, summary, debug };
 }
 
 function buildAddressSuggestions(input = "") {
@@ -908,6 +1598,39 @@ export async function uploadFileStandalone(file) {
   return upload;
 }
 
+export async function parseLacwDiaryFileStandalone(file) {
+  const fileUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+
+  try {
+    const response = await fetch("/api/parse-diary", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fileUrl }),
+    });
+    if (response.ok) {
+      const result = await response.json();
+      if (result?.entries) {
+        result.debug = {
+          ...(result.debug || {}),
+          parserMode: "server",
+        };
+        return result;
+      }
+    }
+  } catch (error) {
+    throw new Error(`Server parser unavailable: ${error?.message || "unknown error"}`);
+  }
+
+  throw new Error("Server parser unavailable: browser fallback disabled for LACW Billing.");
+}
+
 export async function sendEmailStandalone({ to, cc = "", subject = "", body = "", attachment_name = null, attachment_type = null, attachment_base64 = null }) {
   const outbox = readStorage(OUTBOX_KEY, []);
   const email = {
@@ -929,7 +1652,8 @@ export async function sendEmailStandalone({ to, cc = "", subject = "", body = ""
 
 export async function invokeLlmStandalone(payload = {}) {
   if (payload?.response_json_schema) {
-    throw createStandaloneDiaryError();
+    const fileUrl = Array.isArray(payload?.file_urls) ? payload.file_urls[0] : "";
+    return extractDiaryEntriesFromPdf(fileUrl);
   }
   return answerLegalQuestion(payload?.prompt || "");
 }
@@ -953,3 +1677,4 @@ export async function invokeFunctionStandalone(name, payload = {}) {
   }
   return { ok: true, mode: "standalone", message: `No local function handler is configured for ${name}.` };
 }
+

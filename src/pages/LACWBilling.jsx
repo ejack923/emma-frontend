@@ -2,7 +2,10 @@ import { useState, useRef } from "react";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, Upload, FileText, Loader2, CheckCircle2, AlertCircle, RotateCcw, Copy, ChevronDown, ChevronUp, Send, X, Paperclip } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { parseLacwDiaryFileStandalone } from "@/lib/standaloneServices";
 import BillingSummary from "@/components/billing/BillingSummary";
+
+const BILLING_PARSER_VERSION = "20260424ai";
 
 const EXTRACT_SCHEMA = {
   type: "object",
@@ -16,13 +19,13 @@ const EXTRACT_SCHEMA = {
           client_name: { type: "string", description: "Client full name as written in the diary (e.g. WONGRAM, Nicole)" },
           grant_type: { type: "string", description: "Grant/funding type from brackets after client name: VC = VLA client, L = Legal Aid, V = victim-funded, VLA = VLA, pending = pending. Leave blank if not shown." },
           court: { type: "string", description: "Full court or tribunal name (e.g. Melbourne Magistrates' Court, Mildura County Court, Supreme Court)" },
-          appearance_type: { type: "string", description: "Type of appearance — use the exact term from the diary: Mention, Further Mention, Contest, Plea, Sentence, Sentencing, Bail, Committal Mention, ARC Review, Filing Hearing, Case Assessment Hearing, Sentence Indication, Return for Sentence, ICML, CME, FVIO, etc." },
+          appearance_type: { type: "string", description: "Type of appearance â€” use the exact term from the diary: Mention, Further Mention, Contest, Plea, Sentence, Sentencing, Bail, Committal Mention, ARC Review, Filing Hearing, Case Assessment Hearing, Sentence Indication, Return for Sentence, ICML, CME, FVIO, etc." },
           lawyer_initials: { type: "string", description: "Initials of the LACW lawyer who appeared (e.g. CC, BJ, JW, BU, MZ, CB, EC, EM, AM, MP, RC)" },
           counsel_briefed: { type: "string", description: "Name of any external counsel briefed, if mentioned" },
           outcome: { type: "string", description: "Outcome or result of the appearance as noted in the diary" },
           next_date: { type: "string", description: "Next court date mentioned in the outcome, if any" },
           claimable: { type: "boolean", description: "True if this entry is a claimable VLA appearance (VC, L or VLA grant type, or clearly a legal aid matter). False for admin notes, public holidays, non-sitting days, remand calendars, or matters with no appearance." },
-          atlas_claim_type: { type: "string", description: "Suggested ATLAS claim type. IMPORTANT: If the outcome notes an adjournment to a specific future date for a specific appearance type (e.g. 'adj to 15/4 for contest', 'adjourned to 3 June for plea'), set this to 'Confirm adj type' — the next appearance type is not yet billed. Otherwise use: 'Daily appearance fee' for mentions/adjournments; 'Contest hearing appearance' for contests; 'Appearance on sentence or adjournment' for sentence/return for sentence; 'Bail appearance fee' for bail applications; 'Committal mention / case conference appearance' for committal mentions; 'ARC – Review Hearing' for ARC reviews; 'ARC – Eligibility hearing' for ARC eligibility/finalisation; 'Active Case Management – case assessment hearing' for case assessment hearings; 'Sentence indication' for sentence indications; 'Plea – appearance fee (first day)' for pleas; 'Trial – appearance fee (first day)' for trial day 1; 'Directions hearing / mention / callover' for callover/directions. Leave blank if not claimable." },
+          atlas_claim_type: { type: "string", description: "Suggested ATLAS claim type. IMPORTANT: If the outcome notes an adjournment to a specific future date for a specific appearance type (e.g. 'adj to 15/4 for contest', 'adjourned to 3 June for plea'), set this to 'Confirm adj type' â€” the next appearance type is not yet billed. Otherwise use: 'Daily appearance fee' for mentions/adjournments; 'Contest hearing appearance' for contests; 'Appearance on sentence or adjournment' for sentence/return for sentence; 'Bail appearance fee' for bail applications; 'Committal mention / case conference appearance' for committal mentions; 'ARC â€“ Review Hearing' for ARC reviews; 'ARC â€“ Eligibility hearing' for ARC eligibility/finalisation; 'Active Case Management â€“ case assessment hearing' for case assessment hearings; 'Sentence indication' for sentence indications; 'Plea â€“ appearance fee (first day)' for pleas; 'Trial â€“ appearance fee (first day)' for trial day 1; 'Directions hearing / mention / callover' for callover/directions. Leave blank if not claimable." },
           notes: { type: "string", description: "Any other relevant notes, flags or observations from the diary entry" },
         }
       }
@@ -59,7 +62,7 @@ const GRANT_BADGE = {
 };
 
 const ACTION_OPTIONS = [
-  { value: "", label: "Set action…" },
+  { value: "", label: "Set actionâ€¦" },
   { value: "Claimed", label: "Claimed" },
   { value: "Not claimed", label: "Not claimed" },
   { value: "Aid required", label: "Aid required" },
@@ -101,8 +104,8 @@ function EmailModal({ entry, actionType, onClose }) {
   const handleSend = async () => {
     if (!selectedStaff.length) return;
     setSending(true);
-    const subject = `LACW – ${actionType}: ${entry.client_name || "Client"} (${entry.date || ""})`;
-    const body = `Hi,\n\nThis is a notification regarding the following matter:\n\nClient: ${entry.client_name || "—"}\nDate: ${entry.date || "—"}\nCourt: ${entry.court || "—"}\nAppearance Type: ${entry.appearance_type || "—"}\nGrant Type: ${entry.grant_type || "—"}\nATLAS Claim: ${entry.atlas_claim_type || "—"}\nOutcome: ${entry.outcome || "—"}\n\nAction Required: ${actionType}\n\n${message ? `Message:\n${message}\n\n` : ""}Please refer to the LACW Certification Tool for the relevant documentation.\n\nThis email was sent from the LACW Billing Portal.`;
+    const subject = `LACW â€“ ${actionType}: ${entry.client_name || "Client"} (${entry.date || ""})`;
+    const body = `Hi,\n\nThis is a notification regarding the following matter:\n\nClient: ${entry.client_name || "â€”"}\nDate: ${entry.date || "â€”"}\nCourt: ${entry.court || "â€”"}\nAppearance Type: ${entry.appearance_type || "â€”"}\nGrant Type: ${entry.grant_type || "â€”"}\nATLAS Claim: ${entry.atlas_claim_type || "â€”"}\nOutcome: ${entry.outcome || "â€”"}\n\nAction Required: ${actionType}\n\n${message ? `Message:\n${message}\n\n` : ""}Please refer to the LACW Certification Tool for the relevant documentation.\n\nThis email was sent from the LACW Billing Portal.`;
 
     for (const email of selectedStaff) {
       await base44.integrations.Core.SendEmail({ to: email, subject, body });
@@ -118,7 +121,7 @@ function EmailModal({ entry, actionType, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
             <p className="font-semibold text-slate-800 text-sm">{actionType}</p>
-            <p className="text-xs text-slate-400">{entry.client_name} · {entry.date}</p>
+            <p className="text-xs text-slate-400">{entry.client_name} Â· {entry.date}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
             <X className="w-5 h-5" />
@@ -150,7 +153,7 @@ function EmailModal({ entry, actionType, onClose }) {
               value={message}
               onChange={e => setMessage(e.target.value)}
               rows={3}
-              placeholder="Add any additional context or notes…"
+              placeholder="Add any additional context or notesâ€¦"
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
             />
           </div>
@@ -163,7 +166,7 @@ function EmailModal({ entry, actionType, onClose }) {
             disabled={!selectedStaff.length || sending || sent}
             className="flex items-center gap-2 text-sm font-semibold bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg transition-colors disabled:opacity-50"
           >
-            {sent ? "✓ Sent!" : sending ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</> : <><Send className="w-4 h-4" /> Send</>}
+            {sent ? "âœ“ Sent!" : sending ? <><Loader2 className="w-4 h-4 animate-spin" /> Sendingâ€¦</> : <><Send className="w-4 h-4" /> Send</>}
           </button>
         </div>
       </div>
@@ -222,7 +225,7 @@ function AppearanceRow({ entry, index, action, onActionChange }) {
         >
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="text-sm font-bold text-slate-900">{entry.date || "—"}</span>
+              <span className="text-sm font-bold text-slate-900">{entry.date || "â€”"}</span>
               {entry.client_name && <span className="text-sm font-semibold text-slate-700">{entry.client_name}</span>}
               {entry.grant_type && (
                 <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${GRANT_BADGE[entry.grant_type] || "bg-slate-100 text-slate-600 border-slate-200"}`}>{entry.grant_type}</span>
@@ -281,7 +284,7 @@ function AppearanceRow({ entry, index, action, onActionChange }) {
                     className="flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-800 border border-teal-200 bg-teal-50 hover:bg-teal-100 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
                   >
                     {acfUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />}
-                    {acfUploading ? "Uploading…" : "ACF lodgment confirmation"}
+                    {acfUploading ? "Uploadingâ€¦" : "ACF lodgment confirmation"}
                   </button>
                 )}
               </div>
@@ -308,8 +311,8 @@ function ClientGroup({ clientName, entries, grantType, actions, onActionChange }
         <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
           <span className="text-sm font-bold text-slate-900">{clientName}</span>
           {grantType && <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${grantBadge}`}>{grantType}</span>}
-          <span className="text-xs text-slate-400">{entries.length} appearance{entries.length !== 1 ? "s" : ""}{claimableCount < entries.length ? ` · ${claimableCount} claimable` : ""}</span>
-          {claimedCount > 0 && <span className="text-xs font-semibold text-emerald-600">· {claimedCount} claimed</span>}
+          <span className="text-xs text-slate-400">{entries.length} appearance{entries.length !== 1 ? "s" : ""}{claimableCount < entries.length ? ` Â· ${claimableCount} claimable` : ""}</span>
+          {claimedCount > 0 && <span className="text-xs font-semibold text-emerald-600">Â· {claimedCount} claimed</span>}
         </div>
         {collapsed ? <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <ChevronUp className="w-4 h-4 text-slate-400 flex-shrink-0" />}
       </button>
@@ -365,34 +368,13 @@ export default function LACWBilling() {
     setError(null);
     setResult(null);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-
-      const extracted = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a legal billing assistant for the Law and Advocacy Centre for Women (LACW) in Melbourne, Australia.
-
-The attached file is a LACW Court Diary PDF. Read every page carefully and extract all client entries.
-
-DIARY FORMAT:
-- Days are headings: "Monday, March 9, 2026" etc.
-- Under each day are court sections: "Melbourne Magistrates' Court", "Mildura County Court", "Supreme Court" etc.
-- Each client entry looks like: "SURNAME, Firstname (GRANT) – Appearance Type – INITIALS – outcome text"
-- Grant types in brackets: (VC) = VLA client, (L) = Legal Aid, (V) = victim, (VLA) = VLA, (pending) = pending
-- Lawyer initials come after a dash: CC, BJ, JW, BU, MZ, CB, EC, EM, AM, MP, RC etc.
-- Outcome text follows the lawyer initials after another dash
-- "A REMANDS" = remand calendar, not individual client entries
-- Skip: Public Holiday, Non-sitting day, A REMANDS (no named client), admin-only entries
-
-Extract EVERY named client as a separate entry. Return ALL entries found across ALL pages and ALL days.
-
-ATLAS CLAIM TYPE RULE: If the outcome text notes that the matter was adjourned to a specific future date for a specific future appearance type (e.g. "adj to 15/4 for contest", "adjourned to 3 June for plea", "rem to 10/5 for sentence"), set atlas_claim_type to "Confirm adj type" — this signals that the next hearing type needs to be confirmed before billing. Only assign a specific ATLAS fee type when the appearance type of THIS hearing (not the next) is clear and unambiguous.
-Output a JSON object with an "entries" array and a "summary" string.`,
-        file_urls: [file_url],
-        response_json_schema: EXTRACT_SCHEMA,
-        model: "gemini_3_pro",
-      });
+      const extracted = await parseLacwDiaryFileStandalone(file);
 
       if (!extracted?.entries?.length) {
-        setError("No entries extracted. The PDF may be a scanned image or unreadable. Try a different file.");
+        const debugText = extracted?.debug
+          ? ` [debug source=${extracted.debug.selectedSource}, pdfJs=${extracted.debug.pdfJsTextLength}, stream=${extracted.debug.streamTextLength}, ocr=${extracted.debug.ocrTextLength}, normalized=${extracted.debug.normalizedLength}, context=${extracted.debug.contextEntriesCount}, merged=${extracted.debug.mergedLineCount}, fallback=${extracted.debug.fallbackEntriesCount}]`
+          : "";
+        setError(`No entries extracted. The PDF may be a scanned image or unreadable. Try a different file.${debugText}`);
         setLoading(false);
         return;
       }
@@ -435,6 +417,9 @@ Output a JSON object with an "entries" array and a "summary" string.`,
         <div className="text-center">
           <p className="font-semibold text-slate-800 text-sm">LACW Billing</p>
           <p className="text-xs text-slate-400">Diary to ATLAS claim processor</p>
+          <div className="mt-1 inline-flex items-center rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+            Parser {BILLING_PARSER_VERSION}
+          </div>
         </div>
         {result ? (
           <button onClick={reset} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors">
@@ -460,13 +445,13 @@ Output a JSON object with an "entries" array and a "summary" string.`,
                 <div className="flex flex-col items-center gap-3">
                   <FileText className="w-10 h-10 text-purple-500" />
                   <p className="font-semibold text-slate-800">{file.name}</p>
-                  <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB · Click to change</p>
+                  <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB Â· Click to change</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
                   <Upload className="w-10 h-10 text-slate-300" />
                   <p className="font-semibold text-slate-700">Drop your diary PDF here</p>
-                  <p className="text-xs text-slate-400">or click to browse · PDF files only</p>
+                  <p className="text-xs text-slate-400">or click to browse Â· PDF files only</p>
                 </div>
               )}
             </div>
@@ -492,8 +477,8 @@ Output a JSON object with an "entries" array and a "summary" string.`,
           {loading && (
             <div className="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center gap-4">
               <Loader2 className="w-10 h-10 text-purple-500 animate-spin" />
-              <p className="font-semibold text-slate-700">Reading your diary PDF…</p>
-              <p className="text-xs text-slate-400">This uses AI to extract and classify each entry. May take 15–30 seconds.</p>
+              <p className="font-semibold text-slate-700">Reading your diary PDFâ€¦</p>
+              <p className="text-xs text-slate-400">This uses AI to extract and classify each entry. May take 15â€“30 seconds.</p>
             </div>
           )}
 
@@ -510,10 +495,18 @@ Output a JSON object with an "entries" array and a "summary" string.`,
                       <CheckCircle2 className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-purple-900">
-                          {claimable.length} claimable entries · {all.length} total extracted
+                          {claimable.length} claimable entries Â· {all.length} total extracted
                         </p>
-                        {result.summary && <p className="text-xs text-purple-700 mt-0.5">{result.summary}</p>}
-                      </div>
+                          {result.summary && (
+                            <p className="text-xs text-purple-700 mt-0.5">
+                              {result.summary}
+                              {result.debug?.parserMode ? ` Parser source=${result.debug.parserMode}.` : ""}
+                              {result.debug
+                                ? ` Debug: source=${result.debug.selectedSource}, pdfJs=${result.debug.pdfJsTextLength}, legacy=${result.debug.legacyTextLength}, stream=${result.debug.streamTextLength}, ocr=${result.debug.ocrTextLength}, normalized=${result.debug.normalizedLength}, context=${result.debug.contextEntriesCount}, merged=${result.debug.mergedLineCount}, fallback=${result.debug.fallbackEntriesCount}`
+                                : ""}
+                            </p>
+                          )}
+                        </div>
                       <button onClick={handleCopyAll} className="flex items-center gap-1.5 text-xs font-semibold text-purple-600 hover:text-purple-800 border border-purple-300 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0">
                         <Copy className="w-3.5 h-3.5" />
                         {copied ? "Copied!" : "Copy all"}
@@ -565,7 +558,7 @@ Output a JSON object with an "entries" array and a "summary" string.`,
 
               <p className="text-xs text-slate-400 text-center">AI extraction may not be 100% accurate. Always verify each entry against the original diary before submitting claims in ATLAS.</p>
 
-              {/* Summary — show once every displayed entry has an action */}
+              {/* Summary â€” show once every displayed entry has an action */}
               {(() => {
                 const claimable = result.entries?.filter(e => e.claimable !== false) || [];
                 const all = result.entries || [];
@@ -582,3 +575,9 @@ Output a JSON object with an "entries" array and a "summary" string.`,
     </div>
   );
 }
+
+
+
+
+
+
