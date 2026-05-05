@@ -127,6 +127,10 @@ export const actionstepAdapter = createPracticeManagerAdapter({
         lawyer: "Emma Muir",
         summary: "Contest mention for summary offences requiring aid assessment.",
       },
+      aid: {
+        guideline: "GUILTY PLEA",
+        guidelineResponse: "G7 Immediate imprisonment is a likelihood: YES",
+      },
     },
   ],
 });

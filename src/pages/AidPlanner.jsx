@@ -112,6 +112,14 @@ function applyImportedMatter(prev, adapter, selectedMatter) {
       ? selectedMatter.matter.nextAppearanceDate
       : prev.matter.nextAppearanceDate;
 
+  const aid = selectedMatter.aid
+    ? {
+        ...prev.aid,
+        guideline: selectedMatter.aid.guideline || prev.aid.guideline,
+        guidelineResponse: selectedMatter.aid.guidelineResponse || prev.aid.guidelineResponse,
+      }
+    : prev.aid;
+
   return updateTimestamp({
     ...prev,
     source: {
@@ -126,6 +134,7 @@ function applyImportedMatter(prev, adapter, selectedMatter) {
       ...selectedMatter.matter,
       nextAppearanceDate,
     },
+    aid,
   });
 }
 

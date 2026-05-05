@@ -247,6 +247,15 @@ export default function MinimumInfoForm({
             className="h-10 w-full rounded-lg border border-slate-200 px-3"
           />
         </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Guideline response</span>
+          <input
+            value={planner.aid.guidelineResponse || ""}
+            onChange={(e) => setAidField("guidelineResponse", e.target.value)}
+            className="h-10 w-full rounded-lg border border-slate-200 px-3"
+            placeholder="e.g. G7 Immediate imprisonment is a likelihood: YES"
+          />
+        </label>
         <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-3">
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700">Aid Number <span className="text-rose-600">*</span></span>
