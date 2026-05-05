@@ -111,5 +111,22 @@ export const actionstepAdapter = createPracticeManagerAdapter({
         summary: "Criminal mention listed for funding and next-appearance review.",
       },
     },
+    {
+      externalId: "act-101305",
+      client: {
+        firstName: "Jeremy",
+        lastName: "Selleck",
+        fullName: "Jeremy Selleck",
+        fileNumber: "AS-101305",
+      },
+      matter: {
+        matterType: "Criminal",
+        court: "Magistrates' Court",
+        appearanceType: "Contest Mention",
+        nextAppearanceDate: "2026-05-28",
+        lawyer: "Emma Muir",
+        summary: "Contest mention for summary offences requiring aid assessment.",
+      },
+    },
   ],
 });
