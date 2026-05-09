@@ -245,7 +245,12 @@ export const GUIDELINES = {
         items: [
           { id: "6_merit_1", text: "Client is in custody and seeking bail OR bail variation/revocation" },
           { id: "6_merit_2", text: "Client is charged with a serious offence OR bail was refused by Magistrates' Court and application is to Supreme/County Court" },
-          { id: "6_merit_3", text: "There are reasonable grounds to make the application" },
+          { id: "6_merit_3", text: "There is a reasonable basis to make the application — having regard to the charges, the client's personal circumstances, and relevant bail law (including ss 3AAAA and 3AAA Bail Act)" },
+          { id: "6_merit_4", text: "Considered whether time on remand is likely to exceed any sentence of imprisonment for the underlying offending" },
+          { id: "6_merit_5", text: "If client is a child: s3B Bail Act applied — VLA considers there is always a reasonable basis for a bail application" },
+          { id: "6_merit_6", text: "If client is an Aboriginal or Torres Strait Islander person: s3A Bail Act applied — VLA considers there is always a reasonable basis for a bail application" },
+          { id: "6_merit_7", text: "OR assistance sought to apply to vary bail conditions" },
+          { id: "6_merit_8", text: "OR assistance sought to respond to an application for revocation" },
         ],
       },
       {

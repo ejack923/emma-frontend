@@ -1,5 +1,8 @@
 import { inflate } from "pako";
-import { getDocument } from "pdfjs-dist/build/pdf.mjs";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/build/pdf.mjs";
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+GlobalWorkerOptions.workerSrc = workerSrc;
 
 const PDFJS_BROWSER_OPTIONS = {
   disableWorker: true,
@@ -43,7 +46,7 @@ function uint8ArrayToLatin1String(bytes) {
   return output;
 }
 
-async function extractTextFromPdfFile(file) {
+export async function extractTextFromPdfFile(file) {
   const arrayBuffer = await file.arrayBuffer();
   const bytes = new Uint8Array(arrayBuffer);
 
@@ -373,11 +376,20 @@ function extractTemplateGuideline(lines = []) {
 
   const shouldSkip = (value = "") => {
     const normalized = cleanLine(value);
+    const lower = normalized.toLowerCase();
     if (!normalized) return true;
     if (
       /^(GL|\*+|YES|NO|G\d+[A-Z]?|GUIDELINE|STATEMENT|ADDITIO|NAL GUIDELINE|INFORMAT|ION|MEANS TE|ST RESULT|S|PROFESSIONA|L COSTS|ELIGIBIL|CONTRIB|PROFESSION|COSTS?|-)$/i.test(
         normalized
       )
+    ) {
+      return true;
+    }
+    if (
+      lower.includes("guideline for the primary matter") ||
+      lower.includes("when this application is for both bail") ||
+      lower.includes("select the special circumstances guideline") ||
+      lower.includes("selection of the guideline constitutes")
     ) {
       return true;
     }

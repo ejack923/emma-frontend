@@ -7,6 +7,8 @@ import {
   sendEmailStandalone,
   updateLegalAidApplicationStandalone,
   uploadFileStandalone,
+  listConflictNamesStandalone,
+  extractDataFromUploadedFileStandalone,
 } from "@/lib/standaloneServices";
 
 const localUser = {
@@ -134,6 +136,11 @@ export const base44 = {
         return updateLegalAidApplicationStandalone(id, payload);
       },
     },
+    ConflictName: {
+      async list(sort, limit) {
+        return listConflictNamesStandalone(sort, limit);
+      },
+    },
   },
   integrations: {
     Core: {
@@ -163,6 +170,12 @@ export const base44 = {
           return json.result;
         }
         return invokeLlmStandalone(payload);
+      },
+      async ExtractDataFromUploadedFile(payload = {}) {
+        if (isRemoteMode()) {
+          return postJson("/api/app/extract-data", payload);
+        }
+        return extractDataFromUploadedFileStandalone(payload);
       },
     },
   },

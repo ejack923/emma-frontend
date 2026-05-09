@@ -27,6 +27,7 @@ import {
   loadActionstepOAuthDraft,
   saveActionstepOAuthDraft,
   searchActionstepMatters,
+  listAllActionstepMatters,
 } from "@/lib/aidPlannerAdapters/actionstepClient";
 
 function AdapterBadge({ stage }) {
@@ -72,6 +73,7 @@ export default function PracticeManagerImportModal({
   const [liveResults, setLiveResults] = useState([]);
   const [liveError, setLiveError] = useState("");
   const [isSearchingLive, setIsSearchingLive] = useState(false);
+  const [isImportingAll, setIsImportingAll] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -180,6 +182,31 @@ export default function PracticeManagerImportModal({
       setLiveError(error instanceof Error ? error.message : "Actionstep search failed.");
     } finally {
       setIsSearchingLive(false);
+    }
+  };
+
+  const handleImportAll = async () => {
+    setLiveError("");
+    setIsImportingAll(true);
+    try {
+      const results = await listAllActionstepMatters({
+        apiEndpoint,
+        accessToken,
+      });
+      if (results.length === 0) {
+        setLiveError("No matters found to import.");
+        return;
+      }
+      onConfirmAdapter(selectedAdapter, results, {
+        provider: selectedAdapter.id,
+        mode: "live",
+        apiEndpoint,
+        accessToken,
+      });
+    } catch (error) {
+      setLiveError(error instanceof Error ? error.message : "Import all failed.");
+    } finally {
+      setIsImportingAll(false);
     }
   };
 
@@ -558,6 +585,28 @@ export default function PracticeManagerImportModal({
                             <p className="text-xs text-slate-500">
                               Actionstep docs say to use the returned <code>api_endpoint</code> as the base URL and prefix API requests with <code>rest</code>.
                             </p>
+                          </div>
+                        )}
+
+                        {searchMode === "live" && isConnected && accessToken && (
+                          <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-4 flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-bold text-purple-900">Import all matters</p>
+                              <p className="text-xs text-purple-700 mt-0.5">Quickly import up to 100 recent matters from Actionstep.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleImportAll}
+                              disabled={isImportingAll}
+                              className="inline-flex items-center gap-2 rounded-lg bg-white border border-purple-200 px-4 py-2 text-sm font-semibold text-purple-700 hover:bg-purple-100 transition-all shadow-sm disabled:opacity-50"
+                            >
+                              {isImportingAll ? (
+                                <LoaderCircle className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <DatabaseZap className="h-4 w-4" />
+                              )}
+                              Import all matters
+                            </button>
                           </div>
                         )}
 

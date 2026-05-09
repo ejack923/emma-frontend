@@ -40,6 +40,7 @@ const SINGLE_SUMMARY_APPEARANCE_LOOKUP = {
     effectiveFrom: "27/01/2026",
     allocationCount: 3,
     allocationUnit: "day",
+    trackerAliases: ["APPEARANCE", "PLEA"],
   },
   "DEFEND/CONTEST DAILY FEE": {
     appearanceType: "DEFEND/CONTEST DAILY FEE",
@@ -50,6 +51,7 @@ const SINGLE_SUMMARY_APPEARANCE_LOOKUP = {
     effectiveFrom: "27/01/2026",
     allocationCount: 5,
     allocationUnit: "day",
+    trackerAliases: ["DEFEND/CONTEST DAILY FEE", "CONTESTED HEARING"],
   },
   "CONTEST MENTION": {
     appearanceType: "CONTEST MENTION",
@@ -120,6 +122,7 @@ const SINGLE_SUMMARY_APPEARANCE_LOOKUP = {
     effectiveFrom: "27/01/2026",
     allocationCount: 2,
     allocationUnit: "appearance",
+    trackerAliases: ["APPEAR AT SENTENCE", "SENTENCE"],
   },
   "TRAVEL FEE": {
     appearanceType: "TRAVEL FEE",
@@ -190,6 +193,7 @@ const SINGLE_SUMMARY_APPEARANCE_LOOKUP = {
     effectiveFrom: "27/01/2026",
     allocationCount: 1,
     allocationUnit: "appearance",
+    trackerAliases: ["FIRST REMAND HEARING"],
   },
   "SUMMARY CRIME MENTION": {
     appearanceType: "SUMMARY CRIME MENTION",
@@ -200,6 +204,7 @@ const SINGLE_SUMMARY_APPEARANCE_LOOKUP = {
     effectiveFrom: "30/03/2026",
     allocationCount: 2,
     allocationUnit: "appearance",
+    trackerAliases: ["SUMMARY CRIME MENTION", "MENTION"],
   },
 };
 
@@ -278,8 +283,21 @@ export function getPlannerAppearanceOptions(courtName, aidTypeList = [], current
 }
 
 export function getPlannerAppearanceFeeInfo(courtName, appearanceType, aidTypeList = []) {
-  if (hasSummarySingleAidType(aidTypeList) && SINGLE_SUMMARY_APPEARANCE_LOOKUP[appearanceType]) {
-    return SINGLE_SUMMARY_APPEARANCE_LOOKUP[appearanceType];
+  if (hasSummarySingleAidType(aidTypeList)) {
+    if (SINGLE_SUMMARY_APPEARANCE_LOOKUP[appearanceType]) {
+      return SINGLE_SUMMARY_APPEARANCE_LOOKUP[appearanceType];
+    }
+    // Check aliases
+    const normalizedTarget = normalizeTrackerValue(appearanceType);
+    for (const key of Object.keys(SINGLE_SUMMARY_APPEARANCE_LOOKUP)) {
+      const row = SINGLE_SUMMARY_APPEARANCE_LOOKUP[key];
+      const aliases = [row.appearanceType, row.feeType, ...(row.trackerAliases || [])]
+        .map(normalizeTrackerValue)
+        .filter(Boolean);
+      if (aliases.includes(normalizedTarget)) {
+        return row;
+      }
+    }
   }
 
   const backsheetCourt = getBacksheetCourtName(courtName);
@@ -405,7 +423,7 @@ function normalizeTrackerValue(value = "") {
   return `${value || ""}`.toUpperCase().replace(/[^A-Z0-9]+/g, "");
 }
 
-function claimMatchesTrackerRow(claim, row) {
+export function claimMatchesTrackerRow(claim, row) {
   const candidates = [
     claim?.appearanceType,
     claim?.customAppearanceType,
@@ -442,10 +460,15 @@ export function getClaimAvailabilityTable(planner) {
 
   const claimedCounts = new Map();
   for (const claim of planner?.appearanceClaims || []) {
-    if (!claim?.claimLodged) continue;
     const matchedRow = trackerRows.find((row) => claimMatchesTrackerRow(claim, row));
     if (!matchedRow) continue;
-    claimedCounts.set(matchedRow.feeType, (claimedCounts.get(matchedRow.feeType) || 0) + 1);
+    
+    let claimAmount = 1;
+    if (matchedRow.allocationUnit === "kilometre" && claim.claimedUnits) {
+      claimAmount = Number(claim.claimedUnits) || 0;
+    }
+    
+    claimedCounts.set(matchedRow.feeType, (claimedCounts.get(matchedRow.feeType) || 0) + claimAmount);
   }
 
   return trackerRows.map((row) => {

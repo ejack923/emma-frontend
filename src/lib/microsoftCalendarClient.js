@@ -169,6 +169,20 @@ export async function listOutlookCalendars(accessToken) {
   }));
 }
 
+export async function listOutlookCalendarEvents(accessToken, calendarId, timeMin, timeMax) {
+  if (!calendarId) {
+    throw new Error("Choose an Outlook calendar first.");
+  }
+
+  const url = new URL(`${MICROSOFT_GRAPH_ROOT}/me/calendars/${encodeURIComponent(calendarId)}/calendarView`);
+  if (timeMin) url.searchParams.set("startDateTime", `${timeMin}T00:00:00.000Z`);
+  if (timeMax) url.searchParams.set("endDateTime", `${timeMax}T23:59:59.999Z`);
+  url.searchParams.set("$orderby", "start/dateTime");
+
+  const payload = await microsoftGraphFetch(accessToken, url.toString());
+  return payload.value || [];
+}
+
 export async function createOutlookCalendarEvent(accessToken, calendarId, event) {
   if (!calendarId) {
     throw new Error("Choose an Outlook calendar first.");

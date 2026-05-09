@@ -211,13 +211,21 @@ export default function AidPlanner() {
     setPlanner((prev) => updateTimestamp({ ...prev, notes: value }));
   };
 
-  const addAppearanceClaim = () => {
-    setPlanner((prev) =>
-      updateTimestamp({
+  const addAppearanceClaim = (initialValues = {}) => {
+    setPlanner((prev) => {
+      const baseClaim = createAppearanceClaim();
+      const newClaim = { ...baseClaim, ...initialValues };
+      
+      // If an appearanceType is provided, try to apply fee defaults
+      const finalClaim = initialValues.appearanceType && initialValues.appearanceType !== "Other"
+        ? applyPlannerAppearanceFeeDefaults(newClaim, prev.matter.court, initialValues.appearanceType, prev.aid?.aidTypeList || [])
+        : newClaim;
+
+      return updateTimestamp({
         ...prev,
-        appearanceClaims: [...(prev.appearanceClaims || []), createAppearanceClaim()],
-      })
-    );
+        appearanceClaims: [...(prev.appearanceClaims || []), finalClaim],
+      });
+    });
   };
 
   const updateAppearanceClaim = (id, field, value) => {
@@ -285,6 +293,7 @@ export default function AidPlanner() {
               outcome: claim.outcome || inferOutcomeFromText(claim.notes || ""),
               notes: claim.notes || "",
               importSource: claim.importSource || "",
+              claimedUnits: claim.claimedUnits || "",
             };
             return {
               ...nextClaim,

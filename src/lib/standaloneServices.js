@@ -1,10 +1,14 @@
 import { inflate } from "pako";
-import { getDocument } from "pdfjs-dist/build/pdf.mjs";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/build/pdf.mjs";
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { createWorker } from "tesseract.js";
+
+GlobalWorkerOptions.workerSrc = workerSrc;
 
 const OUTBOX_KEY = "demo_standalone_outbox";
 const UPLOADS_KEY = "demo_standalone_uploads";
 const LEGAL_AID_APPLICATIONS_KEY = "demo_legal_aid_applications";
+const CONFLICT_NAMES_KEY = "demo_conflict_names";
 const LEGACY_PDFJS_MODULE_URL = "/pdfjs/legacy/build/pdf.mjs";
 let diaryOcrWorkerPromise = null;
 const PDFJS_BROWSER_OPTIONS = {
@@ -1499,6 +1503,23 @@ export async function listLegalAidApplicationsStandalone(sort = "-updated_date",
   return applications;
 }
 
+function readConflictNames() {
+  const names = readStorage(CONFLICT_NAMES_KEY, [
+    { id: "cn-1", name: "John Doe", category: "Opposing Party" },
+    { id: "cn-2", name: "Jane Smith", category: "Former Client" },
+    { id: "cn-3", name: "Robert Jones", category: "Witness for Prosecution" },
+  ]);
+  return names;
+}
+
+export async function listConflictNamesStandalone(sort, limit) {
+  const names = readConflictNames();
+  if (limit) {
+    return names.slice(0, limit);
+  }
+  return names;
+}
+
 export async function getLegalAidApplicationStandalone(id) {
   const applications = readApplications();
   return applications.find((application) => application.id === id) || null;
@@ -1584,7 +1605,6 @@ export async function uploadFileStandalone(file) {
     reader.readAsDataURL(file);
   });
 
-  const uploads = readStorage(UPLOADS_KEY, []);
   const upload = {
     id: createId("upload"),
     name: file.name,
@@ -1594,8 +1614,6 @@ export async function uploadFileStandalone(file) {
     file_url: readerResult,
     created_at: new Date().toISOString(),
   };
-  uploads.unshift(upload);
-  writeStorage(UPLOADS_KEY, uploads.slice(0, 50));
   return upload;
 }
 
@@ -1626,10 +1644,19 @@ export async function parseLacwDiaryFileStandalone(file) {
       }
     }
   } catch (error) {
-    throw new Error(`Server parser unavailable: ${error?.message || "unknown error"}`);
+    console.warn(`Server parser unavailable: ${error?.message || "unknown error"}. Falling back to browser parser.`);
   }
 
-  throw new Error("Server parser unavailable: browser fallback disabled for LACW Billing.");
+  try {
+    const fallbackResult = await extractDiaryEntriesFromPdf(fileUrl);
+    fallbackResult.debug = {
+      ...(fallbackResult.debug || {}),
+      parserMode: "browser",
+    };
+    return fallbackResult;
+  } catch (fallbackError) {
+    throw new Error(`Diary parsing failed: ${fallbackError?.message || "unknown error"}`);
+  }
 }
 
 export async function sendEmailStandalone({ to, cc = "", subject = "", body = "", attachment_name = null, attachment_type = null, attachment_base64 = null }) {
@@ -1657,6 +1684,25 @@ export async function invokeLlmStandalone(payload = {}) {
     return extractDiaryEntriesFromPdf(fileUrl);
   }
   return answerLegalQuestion(payload?.prompt || "");
+}
+
+export async function extractDataFromUploadedFileStandalone({ file_url, json_schema }) {
+  // Standalone mock: simulate extraction
+  return {
+    status: "success",
+    output: {
+      victims: [
+        { full_name: "John Doe", role: "Primary Victim" },
+        { full_name: "Sarah Miller", role: "Complainant" }
+      ],
+      witnesses: [
+        { full_name: "Officer Smith", role: "Arresting Officer" }
+      ],
+      other_parties: [
+        { full_name: "Robert Jones", role: "Co-accused" }
+      ]
+    }
+  };
 }
 
 export async function invokeFunctionStandalone(name, payload = {}) {

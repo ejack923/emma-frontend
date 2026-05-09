@@ -53,22 +53,38 @@ export default function VLAChecklist() {
     const element = mainContentRef.current;
     if (!element) return;
 
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-    const pdf = new jsPDF("p", "mm", "a4");
-    const width = pdf.internal.pageSize.getWidth();
-    const height = pdf.internal.pageSize.getHeight();
-    const imgHeight = (canvas.height * width) / canvas.width;
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
 
-    let position = 0;
-    const imgData = canvas.toDataURL("image/png");
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
 
-    while (position < imgHeight) {
-      pdf.addImage(imgData, "PNG", 0, position, width, height);
-      position += height;
-      if (position < imgHeight) pdf.addPage();
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, pageWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pageWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save("Guideline-Certification.pdf");
+    } catch (err) {
+      console.error("PDF generation failed, falling back to print:", err);
+      window.print();
     }
-
-    pdf.save("checklist.pdf");
   };
 
   const handlePrint = () => {

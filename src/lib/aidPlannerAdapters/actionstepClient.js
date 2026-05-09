@@ -256,6 +256,22 @@ export async function searchActionstepMatters({ apiEndpoint, accessToken, query 
   return uniqueMatters(allResults);
 }
 
+export async function listAllActionstepMatters({ apiEndpoint, accessToken }) {
+  const baseUrl = ensureApiBase(apiEndpoint);
+  if (!baseUrl) throw new Error("Actionstep API endpoint is required.");
+  if (!accessToken?.trim()) throw new Error("Actionstep access token is required.");
+
+  const url = new URL("rest/actions", baseUrl);
+  url.searchParams.set("pageSize", "100");
+  url.searchParams.set("include", "actionType,assignedTo,owner,rate");
+  url.searchParams.set("fields[actions]", ":default,reference,number,fileNumber,code,displayCode,name,displayName,title,description,startDate,startTimestamp,createdAt,createdTimestamp,modifiedAt,modifiedTimestamp");
+  url.searchParams.set("fields[actiontypes]", ":default,displayName,name");
+  url.searchParams.set("fields[participants]", ":default,displayName,firstName,lastName");
+  url.searchParams.set("fields[rates]", ":default,displayName,name");
+
+  return fetchActionstepSearch(url, accessToken);
+}
+
 export function saveActionstepOAuthDraft(draft) {
   window.sessionStorage.setItem(OAUTH_DRAFT_KEY, JSON.stringify(draft));
 }

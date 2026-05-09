@@ -58,6 +58,7 @@ import IntakeForm from './pages/IntakeForm';
 import LegalAidForm from './pages/LegalAidForm';
 import MemoPrecedent from './pages/MemoPrecedent';
 import VLAReportWorksheet from './pages/VLAReportWorksheet';
+import StandAloneGuidelines from './pages/StandAloneGuidelines';
 
 
 export const PAGES = {
@@ -72,6 +73,7 @@ export const PAGES = {
     "LegalAidForm": LegalAidForm,
     "MemoPrecedent": MemoPrecedent,
     "VLAReportWorksheet": VLAReportWorksheet,
+    "StandAloneGuidelines": StandAloneGuidelines,
 }
 
 export const pagesConfig = {

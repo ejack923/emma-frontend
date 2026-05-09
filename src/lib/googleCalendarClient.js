@@ -65,9 +65,11 @@ export async function requestGoogleCalendarAccessToken(clientId) {
 
 async function googleApiFetch(accessToken, url) {
   const response = await fetch(url, {
+    method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+    cache: "no-store",
   });
 
   if (!response.ok) {

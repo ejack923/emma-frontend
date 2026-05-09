@@ -111,5 +111,22 @@ export const actionstepAdapter = createPracticeManagerAdapter({
         summary: "Criminal mention listed for funding and next-appearance review.",
       },
     },
+    {
+      externalId: "act-101300",
+      client: {
+        firstName: "Phillip",
+        lastName: "Souter",
+        fullName: "Phillip Souter",
+        fileNumber: "AS-101300",
+      },
+      matter: {
+        matterType: "Criminal",
+        court: "Magistrates' Court",
+        appearanceType: "Mention",
+        nextAppearanceDate: "2026-06-01",
+        lawyer: "Emma Muir",
+        summary: "Start-to-finish testing matter for the staff portal.",
+      },
+    },
   ],
 });

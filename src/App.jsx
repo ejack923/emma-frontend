@@ -17,6 +17,7 @@ import TrainingGuide from '@/pages/TrainingGuide';
 import BacksheetToCounsel from '@/pages/BacksheetToCounsel';
 import TravelClaims from '@/pages/TravelClaims';
 import ApplyForAid from '@/pages/ApplyForAid';
+import StandAloneGuidelines from '@/pages/StandAloneGuidelines';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -30,7 +31,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
   const location = useLocation();
-  const showBundleBar = location.pathname !== "/" && location.pathname !== "/Home";
+  const showBundleBar = location.pathname !== "/" && location.pathname !== "/Home" && location.pathname !== "/StandAloneGuidelines";
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -77,6 +78,7 @@ const AuthenticatedApp = () => {
       <Route path="/BacksheetToCounsel" element={<LayoutWrapper currentPageName="BacksheetToCounsel"><BacksheetToCounsel /></LayoutWrapper>} />
       <Route path="/TravelClaims" element={<LayoutWrapper currentPageName="TravelClaims"><TravelClaims /></LayoutWrapper>} />
       <Route path="/ApplyForAid" element={<LayoutWrapper currentPageName="ApplyForAid"><ApplyForAid /></LayoutWrapper>} />
+      <Route path="/StandAloneGuidelines" element={<LayoutWrapper currentPageName="StandAloneGuidelines"><StandAloneGuidelines /></LayoutWrapper>} />
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>

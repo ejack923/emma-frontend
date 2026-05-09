@@ -32,6 +32,7 @@ export default function OptionalMatterDetails({ planner, setClientField, setMatt
           <input value={planner.matter.counsel} onChange={(e) => setMatterField("counsel", e.target.value)} className="w-full h-10 border border-slate-200 rounded-lg px-3" />
         </label>
         <SelectField label="Grant type" value={planner.funding.grantType} onChange={(value) => setFundingField("grantType", value)} options={GRANT_TYPES} />
+        <BooleanField label="Custody?" value={planner.matter.isCustody} onChange={(value) => setMatterField("isCustody", value)} />
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700">VLA reference</span>
           <input value={planner.funding.vlaReference} onChange={(e) => setFundingField("vlaReference", e.target.value)} className="w-full h-10 border border-slate-200 rounded-lg px-3" />

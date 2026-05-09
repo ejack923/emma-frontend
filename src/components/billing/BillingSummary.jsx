@@ -38,9 +38,9 @@ export default function BillingSummary({ entries, actions }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const claimed = entries.filter(e => actions[e._idx] === "Claimed");
-  const notClaimed = entries.filter(e => actions[e._idx] === "Not claimed");
-  const furtherAction = entries.filter(e => NEEDS_ACTION.includes(actions[e._idx]));
+  const claimed = entries.filter(e => actions[e.id] === "Claimed");
+  const notClaimed = entries.filter(e => actions[e.id] === "Not claimed");
+  const furtherAction = entries.filter(e => NEEDS_ACTION.includes(actions[e.id]));
 
   const handleSendSummary = async () => {
     setSending(true);
@@ -51,8 +51,8 @@ export default function BillingSummary({ entries, actions }) {
         <td style="padding:8px 10px;font-size:13px;color:#1e293b;font-weight:600;">${e.client_name || "—"}</td>
         <td style="padding:8px 10px;font-size:12px;color:#64748b;">${e.grant_type || "—"}</td>
         <td style="padding:8px 10px;font-size:12px;color:#64748b;">${e.appearance_type || "—"}</td>
-        ${showAction ? `<td style="padding:8px 10px;"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${actionBg(actions[e._idx])};color:${actionColor(actions[e._idx])};">${actions[e._idx]}</span></td>` : `<td style="padding:8px 10px;font-size:12px;color:#7c3aed;">${e.atlas_claim_type || "—"}</td>`}
-        <td style="padding:8px 10px;font-size:12px;color:#475569;font-style:italic;">${notes[e._idx] || ""}</td>
+        ${showAction ? `<td style="padding:8px 10px;"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${actionBg(actions[e.id])};color:${actionColor(actions[e.id])};">${actions[e.id]}</span></td>` : `<td style="padding:8px 10px;font-size:12px;color:#7c3aed;">${e.atlas_claim_type || "—"}</td>`}
+        <td style="padding:8px 10px;font-size:12px;color:#475569;font-style:italic;">${notes[e.id] || ""}</td>
       </tr>`;
 
     const tableHeader = (cols) => `
@@ -140,7 +140,7 @@ export default function BillingSummary({ entries, actions }) {
             <div className="px-5 pb-4 space-y-3">
               {claimed.length === 0 && <p className="text-xs text-slate-400 italic">None</p>}
               {claimed.map(e => (
-                <SummaryEntry key={e._idx} entry={e} action={actions[e._idx]} note={notes[e._idx] || ""} onNoteChange={v => setNotes(n => ({ ...n, [e._idx]: v }))} />
+                <SummaryEntry key={e.id} entry={e} action={actions[e.id]} note={notes[e.id] || ""} onNoteChange={v => setNotes(n => ({ ...n, [e.id]: v }))} />
               ))}
             </div>
           )}
@@ -163,7 +163,7 @@ export default function BillingSummary({ entries, actions }) {
             <div className="px-5 pb-4 space-y-3">
               {furtherAction.length === 0 && <p className="text-xs text-slate-400 italic">None</p>}
               {furtherAction.map(e => (
-                <SummaryEntry key={e._idx} entry={e} action={actions[e._idx]} note={notes[e._idx] || ""} onNoteChange={v => setNotes(n => ({ ...n, [e._idx]: v }))} />
+                <SummaryEntry key={e.id} entry={e} action={actions[e.id]} note={notes[e.id] || ""} onNoteChange={v => setNotes(n => ({ ...n, [e.id]: v }))} />
               ))}
             </div>
           )}

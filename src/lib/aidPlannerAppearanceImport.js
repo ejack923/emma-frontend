@@ -66,7 +66,28 @@ function toIsoDate(value = "") {
   return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
 }
 
+function extractTemplateField(text, label) {
+  const regex = new RegExp(`${label}[:\\s]+(.*?)(?:\r?\n|$)`, "i");
+  const match = text.match(regex);
+  return match ? match[1].trim() : "";
+}
+
 function inferAppearanceTypeFromText(text = "") {
+  const templatedType = extractTemplateField(text, "Appearance Type") || extractTemplateField(text, "Type");
+  if (templatedType) {
+    const upperTemplated = templatedType.toUpperCase();
+    if (upperTemplated.includes("CONTEST MENTION")) return { appearanceType: "Contest Mention", customAppearanceType: "" };
+    if (upperTemplated.includes("MENTION")) return { appearanceType: "Mention", customAppearanceType: "" };
+    if (upperTemplated.includes("BAIL")) return { appearanceType: "Bail Application", customAppearanceType: "" };
+    if (upperTemplated.includes("PLEA")) return { appearanceType: "Plea", customAppearanceType: "" };
+    if (upperTemplated.includes("SENTENCE")) return { appearanceType: "Sentence", customAppearanceType: "" };
+    if (upperTemplated.includes("COMMITTAL")) return { appearanceType: "Committal", customAppearanceType: "" };
+    if (upperTemplated.includes("APPEAL")) return { appearanceType: "Appeal", customAppearanceType: "" };
+    if (upperTemplated.includes("CONTESTED HEARING") || upperTemplated.includes("TRIAL")) return { appearanceType: "Trial", customAppearanceType: "" };
+    if (upperTemplated.includes("CONFERENCE")) return { appearanceType: "Conference", customAppearanceType: "" };
+    return { appearanceType: "Other", customAppearanceType: templatedType };
+  }
+
   const upper = text.toUpperCase();
   if (upper.includes("CONTEST MENTION")) return { appearanceType: "Contest Mention", customAppearanceType: "" };
   if (upper.includes("MENTION/DIRECTION/CALLOVE") || upper.includes("SPECIAL MENTION") || upper.includes("MENTION")) {
@@ -83,6 +104,9 @@ function inferAppearanceTypeFromText(text = "") {
 }
 
 export function inferOutcomeFromText(text = "") {
+  const templatedOutcome = extractTemplateField(text, "Outcome");
+  if (templatedOutcome) return templatedOutcome;
+
   const compact = text.replace(/\s+/g, " ").trim();
   const adjMatch = compact.match(
     /(adj(?:ourned)?(?:\s+\w+){0,6}\s+to\s+(?:a\s+)?contested hearing(?:\s+on\s+\d{1,2}(?:\/\d{1,2}\/\d{2,4}|\s+[a-z]+\s+\d{2,4}))?)/i
@@ -189,22 +213,46 @@ function getPlannerCalendarRelevance(planner) {
   };
 }
 
+function tokenize(value = "") {
+  return normalizeSearchText(value).split(" ").filter(Boolean);
+}
+
 function matchesCalendarClient(eventText, planner) {
   const relevance = getPlannerCalendarRelevance(planner);
   const normalizedEventText = normalizeSearchText(eventText);
+  const compactEventText = normalizeCompactText(eventText);
+
+  // If the event explicitly contains the Aid Number, it's a guaranteed match regardless of name spelling
+  if (relevance.normalizedAidNumber && compactEventText.includes(relevance.normalizedAidNumber)) {
+    return true;
+  }
 
   const hasClientContext = Boolean(relevance.normalizedFullName || relevance.normalizedFirstName || relevance.normalizedLastName);
-  return !hasClientContext
-    ? true
-    : relevance.normalizedFullName
-      ? normalizedEventText.includes(relevance.normalizedFullName) ||
-        (
-          relevance.normalizedFirstName &&
-          relevance.normalizedLastName &&
-          normalizedEventText.includes(relevance.normalizedFirstName) &&
-          normalizedEventText.includes(relevance.normalizedLastName)
-        )
-      : [relevance.normalizedFirstName, relevance.normalizedLastName].filter(Boolean).every((token) => normalizedEventText.includes(token));
+  if (!hasClientContext) return true;
+
+  // Exact match fallback
+  if (relevance.normalizedFullName && normalizedEventText.includes(relevance.normalizedFullName)) {
+    return true;
+  }
+
+  // Tokenize the full name (handles 'An Marie Jones' against 'anne marie jones' because 'an' matches inside 'anne')
+  const fullTokens = tokenize(relevance.normalizedFullName);
+  
+  if (fullTokens.length > 0) {
+    // Check if every part of the planner's name is found somewhere in the calendar event
+    const allTokensMatch = fullTokens.every((t) => normalizedEventText.includes(t));
+    if (allTokensMatch) return true;
+    
+    // As a fallback for extreme variations, if it's a long name, check if MOST of it matches
+    if (fullTokens.length >= 2) {
+       const matchCount = fullTokens.filter(t => normalizedEventText.includes(t)).length;
+       if (matchCount >= Math.max(2, fullTokens.length - 1)) {
+           return true;
+       }
+    }
+  }
+
+  return false;
 }
 
 function filterCalendarItemsForPlanner(items = [], planner, getSearchText) {
@@ -232,12 +280,14 @@ export async function parseAppearanceCalendarFile(file, planner) {
       "";
     const date = parseIcsDate(dtStart);
     const inferred = inferAppearanceTypeFromText(`${summary}\n${description}`);
+    const units = extractTemplateField(`${summary}\n${description}`, "Units");
 
     return {
       date,
       appearanceType: inferred.appearanceType,
       customAppearanceType: inferred.customAppearanceType,
       outcome: inferOutcomeFromText(`${summary}\n${description}`),
+      claimedUnits: units,
       notes: [summary, description].filter(Boolean).join("\n"),
       importSource: file.name || "Calendar import",
     };
@@ -258,12 +308,14 @@ export function mapGoogleCalendarEventsToAppearanceClaims(events = [], calendarL
       const location = event.location || "";
       const date = parseGoogleEventDate(event.start?.dateTime || event.start?.date || "");
       const inferred = inferAppearanceTypeFromText(`${summary}\n${description}\n${location}`);
+      const units = extractTemplateField(`${summary}\n${description}\n${location}`, "Units");
 
       return {
         date,
         appearanceType: inferred.appearanceType,
         customAppearanceType: inferred.customAppearanceType,
         outcome: inferOutcomeFromText(`${summary}\n${description}\n${location}`),
+        claimedUnits: units,
         notes: [summary, location, description].filter(Boolean).join("\n"),
         importSource: `${calendarLabel} calendar`,
       };
